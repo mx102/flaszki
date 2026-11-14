@@ -1,0 +1,5 @@
+# PROTOTYPE — throwaway. Answers flaszki#6 (generator + solver perf). Not production.
+name: generator_perf_prototype
+publish_to: none
+environment:
+  sdk: ^3.5.0
