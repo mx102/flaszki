@@ -15,8 +15,13 @@ Each Level must be solvable in Goal Queue order, identical on every device, and 
    - **Deal**: Fisher–Yates over all Layers into the filled Flasks (all full), plus `emptyFlasks` empty Flasks.
    - **Goal Queue**: Fisher–Yates over the multiset of Colors, one entry per Flask of that Color, from the same stream.
    - **Reject** if any Flask starts as a Completed Flask.
-   - **Verify** with the solver under queue rules (only the head Color's Completed Flask is sealed and removed). The solver is capped by **node count**, never wall-clock time; hitting the cap counts as rejection.
-3. If every attempt fails: deterministic fallback (one extra empty Flask), which must also verify.
+   - **Verify** with the solver under queue rules (only the head Color's Completed Flask is sealed and removed). The solver is capped by **node count** (`nodeCap = 50 000` states), never wall-clock time; hitting the cap counts as rejection.
+3. `maxAttempts = 10`. If every attempt fails: deterministic fallback (one extra empty Flask), which must also verify.
+
+## Solver
+
+- Depth-first search with move ordering (completing the head Color first, then same-Color Pours, then into an empty Flask), pruning pointless Pours (out of a Completed Flask, single-Color Flask into empty, more than one empty target).
+- Visited set keyed by an **order-independent 52-bit hash** of the state (sum of mixed per-Flask codes + queue position), stored as `Set<int>`: no sort, no Strings. Integer math stays below 2^53, so it's identical on VM, AOT, dart2js and wasm. A collision can only cause a false "visited", so a solvable deal may be rejected but an unsolvable Level is never accepted.
 
 Returns the Level plus difficulty metrics: `B − C` merging Pours, solver nodes expanded, solution length. These are for tuning the curve, not filters.
 
@@ -28,7 +33,16 @@ Returns the Level plus difficulty metrics: `B − C` merging Pours, solver nodes
 
 ## Threading
 
-`generate()` is a pure synchronous function in the logic package. Native runs it in an isolate (`compute`); web runs it on the main thread. Add a web worker only if the performance prototype shows a visible hitch.
+`generate()` is a pure synchronous function in the logic package. **Level N+1 is generated in the background as soon as Level N starts**, so its latency is hidden. Native runs it in an isolate (`compute`). Web runs it on the main thread, **no web worker**, and the web build **must be wasm** (dart2wasm), not dart2js.
+
+Measured in the performance prototype (#6) on an Apple M4, Levels 1–200, with the hash key:
+
+| config | AOT p95 / max | wasm p95 / max | dart2js p95 / max |
+|---|---|---|---|
+| 12 Colors × 1, 2 empty | 1.3 / 4.7 ms | 1.6 / 5.9 ms | 10 / 39 ms |
+| 12 Colors × 2, 2 empty | 5.2 / 37 ms | 6.8 / 49 ms | 53 / 444 ms |
+
+Low-end phones are estimated 10–20× slower (worst case ~0.4–0.75 s at 12 Colors × 2), which pre-generation in an isolate hides. dart2js is too slow on its 53-bit double math to run on the main thread. Level hashes matched across AOT, dart2js and wasm. Code and full tables: branch `prototype/generator-perf`.
 
 ## Considered Options
 
@@ -36,6 +50,7 @@ Returns the Level plus difficulty metrics: `B − C` merging Pours, solver nodes
 
 ## Consequences
 
-- Node cap, retry cap and timings are tuned by the performance prototype; they're part of the versioned algorithm.
+- Node cap and retry cap are part of the versioned algorithm. At `nodeCap = 50 000`, no Level failed and none needed more than 2 attempts.
+- The difficulty curve must give at least 2 empty Flasks at 12 Colors × 1. With 1 empty, only 3 of ~5 950 deals are solvable in queue order.
 - Changing the generator changes Level N; how saved progress handles a version bump is a persistence question.
-- The solver is reusable for a Dead End hint if its cost permits.
+- The solver is cheap enough for an on-device Dead End check: ≤ 2 ms max at 12 Colors × 1, ~5 ms p95 / 30 ms max at 12 Colors × 2 (AOT, M4), with no cap hits at 50 000 nodes.
