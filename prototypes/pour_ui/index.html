@@ -85,8 +85,8 @@ function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t
 function shuffle(a,r){for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
 const topOf=f=>f[f.length-1];
 const isComplete=f=>f.length===CAP&&f.every(x=>x===f[0]);
-const canPour=(a,b)=>a.length>0&&b.length<CAP&&(!b.length||top(b)===top(a));
-function pour(a,b){const c=top(a);let n=0;while(a.length&&top(a)===c&&b.length<CAP){b.push(a.pop());n++}return n}
+const canPour=(a,b)=>a.length>0&&b.length<CAP&&(!b.length||topOf(b)===topOf(a));
+function pour(a,b){const c=topOf(a);let n=0;while(a.length&&topOf(a)===c&&b.length<CAP){b.push(a.pop());n++}return n}
 function autoSeal(fl,q,qi){while(qi<q.length){const i=fl.findIndex(f=>isComplete(f)&&f[0]===q[qi]);if(i<0)break;fl.splice(i,1);qi++}return qi}
 function solvable(fl0,q){
   const seen=new Set();let nodes=0;
@@ -201,7 +201,7 @@ async function doPour(si,ti){
   se.classList.remove('sel');se.style.zIndex=10;
   se.style.transform=`translate(${tp.x-sp.x-dir*tp.w*0.15}px,${tp.y-sp.y-tp.h*0.18}px) rotate(${dir*72}deg)`;
   await sleep(230);
-  const color=top(s.layers),lh=(tp.h-3)*0.85/CAP;
+  const color=topOf(s.layers),lh=(tp.h-3)*0.85/CAP;
   const st=document.createElement('div');st.className='stream';
   Object.assign(st.style,{background:PALETTE[color],left:(tp.x+tp.w/2-3)+'px',top:(tp.y-tp.h*0.12)+'px',height:(tp.h*1.12-t.layers.length*lh-6)+'px'});
   board.appendChild(st);
@@ -263,7 +263,7 @@ function onTap(i){
     G.flasks.forEach((t,j)=>{
       if(j===i||!canPour(s,t.layers))return;
       if(!t.layers.length&&s.every(x=>x===s[0]))return;
-      let run=0;for(let k=s.length-1;k>=0&&s[k]===top(s);k--)run++;
+      let run=0;for(let k=s.length-1;k>=0&&s[k]===topOf(s);k--)run++;
       const sc=(t.layers.length?10:0)+(CAP-t.layers.length>=run?5:0)+t.layers.length;
       if(sc>bs){bs=sc;best=j}
     });
