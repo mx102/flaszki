@@ -1,0 +1,163 @@
+<!DOCTYPE html>
+<html><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PROTOTYPE — palette + colorblind symbols (throwaway)</title>
+<!--
+  THROWAWAY PROTOTYPE for wayfinder ticket "Prototype 12-color palette with colorblind symbols".
+  Question: which 12 Colors + per-Color symbols/patterns stay distinguishable for CVD at small Layer sizes?
+  Variants (?variant=A|B|C): A = glyph on every Layer, B = pattern overlay on every Layer, C = glyph only on top Layer of each run.
+  Other params: palette=P1|P2|P3, cvd=none|protan|deutan|tritan|achroma, lh=<layer px>, seed=N, sym=0|1.
+  Arrow keys / yellow pill switch variants.
+-->
+<style>
+html,body{margin:0;background:#1b1d2a;color:#eee;font-family:system-ui,sans-serif}
+#hud{display:flex;flex-wrap:wrap;gap:8px;align-items:center;padding:8px 10px;background:#00000040;font-size:13px}
+#hud select,#hud input,#hud button{background:#2d3045;color:#eee;border:1px solid #444a66;border-radius:6px;padding:4px 8px;font-size:13px}
+#queue{display:flex;gap:10px;align-items:center;justify-content:center;padding:12px}
+.chip{position:relative;width:30px;height:30px;border-radius:50%;overflow:hidden;box-shadow:0 0 0 2px #fff3}
+.chip.head{width:52px;height:52px;box-shadow:0 0 0 3px #fff}
+#board{display:flex;flex-wrap:wrap;gap:14px;justify-content:center;padding:10px 10px 30px}
+.flask{position:relative;border:3px solid #ffffff88;border-top:none;border-radius:0 0 14px 14px;overflow:hidden;background:#ffffff0a}
+.layer{position:absolute;left:0;right:0;overflow:hidden;display:flex;align-items:center;justify-content:center}
+.glyph{line-height:1;font-weight:700;pointer-events:none}
+#pairs{padding:0 10px 90px;font-size:12px}
+#pairs table{border-collapse:collapse;margin:6px 0}
+#pairs td,#pairs th{padding:2px 5px;border:1px solid #333a55;text-align:center}
+.bad{background:#a0202080}.warn{background:#a0802070}
+.sw{display:inline-block;width:14px;height:14px;border-radius:3px;vertical-align:middle}
+#switcher{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:#ff0;color:#000;border-radius:999px;padding:6px 10px;font:600 13px system-ui;box-shadow:0 4px 14px #000a;z-index:50;white-space:nowrap}
+#switcher button{background:#000;color:#ff0;border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer}
+</style></head><body>
+<div id="hud">
+  <label>Palette <select id="palette"></select></label>
+  <label>Simulate <select id="cvd">
+    <option value="none">normal vision</option><option value="protan">protanopia</option>
+    <option value="deutan">deuteranopia</option><option value="tritan">tritanopia</option>
+    <option value="achroma">achromatopsia (gray)</option></select></label>
+  <label>Layer height <input id="lh" type="range" min="10" max="48" value="22"> <span id="lhv"></span>px</label>
+  <label><input id="sym" type="checkbox" checked> symbols on</label>
+  <button id="reseed">new deal</button>
+  <span id="info"></span>
+</div>
+<div id="queue"></div>
+<div id="board"></div>
+<div id="pairs"></div>
+<div id="switcher"><button id="prev">‹</button><span id="vlabel"></span><button id="next">›</button></div>
+<script>
+const $=id=>document.getElementById(id);
+const PALETTES={
+  P1:{name:'P1 Kelly/Trubetskoy (pour-ui proto)',c:['#e6194b','#3cb44b','#ffe119','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#9a6324','#f4f4f4'],n:['red','green','yellow','blue','orange','purple','cyan','magenta','lime','pink','brown','white']},
+  P2:{name:'P2 Okabe-Ito based + 4',c:['#d55e00','#e69f00','#f0e442','#009e73','#56b4e9','#0072b2','#cc79a7','#f4f4f4','#8b5a2b','#7b3fc4','#9be03c','#ff9ec4'],n:['vermilion','orange','yellow','green','skyblue','blue','rose','white','brown','violet','lime','pink']},
+  P3:{name:'P3 lightness-ladder',c:['#c0182a','#ff7a1a','#ffe14d','#8fd14f','#127a3c','#5fd7e6','#1f4fd1','#6a2bb8','#e85ad0','#ffc2d6','#6b3e1a','#ffffff'],n:['red','orange','yellow','lime','green','cyan','blue','violet','magenta','pink','brown','white']},
+};
+// glyphs: distinct silhouettes, readable at ~10px
+const GLYPHS=['●','▲','■','◆','★','✚','♥','☾','✖','♣','⬟','◯'];
+// patterns as SVG data URIs (drawn in contrasting ink)
+const PAT=['none','hstripe','vstripe','diag','dots','check','zigzag','grid','xhatch','rings','bdiag','bigdot'];
+const params=new URLSearchParams(location.search);
+const VARIANTS={A:'Glyph on every Layer',B:'Pattern on every Layer',C:'Glyph on top Layer of each run'};
+let variant=params.get('variant')||'A', pal=params.get('palette')||'P1', cvd=params.get('cvd')||'none';
+let lh=+(params.get('lh')||22), seed=+(params.get('seed')||1), sym=params.get('sym')!=='0';
+const K=12,CAP=4,EMPTY=2;
+
+// --- color math ---
+const hex2rgb=h=>[1,3,5].map(i=>parseInt(h.slice(i,i+2),16)/255);
+const toLin=c=>c<=0.04045?c/12.92:((c+0.055)/1.055)**2.4;
+const toSrgb=c=>c<=0.0031308?12.92*c:1.055*c**(1/2.4)-0.055;
+const M={ // Machado 2009, severity 1.0, linear RGB
+  protan:[[0.152286,1.052583,-0.204868],[0.114503,0.786281,0.099216],[-0.003882,-0.048116,1.051998]],
+  deutan:[[0.367322,0.860646,-0.227968],[0.280085,0.672501,0.047413],[-0.011820,0.042940,0.968881]],
+  tritan:[[1.255528,-0.076749,-0.178779],[-0.078411,0.930809,0.147602],[0.004733,0.691367,0.303900]]};
+function simLin(hex,mode){
+  let l=hex2rgb(hex).map(toLin);
+  if(mode==='achroma'){const y=0.2126*l[0]+0.7152*l[1]+0.0722*l[2];return [y,y,y]}
+  if(M[mode])l=M[mode].map(r=>r[0]*l[0]+r[1]*l[1]+r[2]*l[2]);
+  return l.map(v=>Math.min(1,Math.max(0,v)));
+}
+function sim(hex,mode){return '#'+simLin(hex,mode).map(v=>Math.round(toSrgb(v)*255).toString(16).padStart(2,'0')).join('')}
+function oklab([r,g,b]){
+  const l=Math.cbrt(0.4122214708*r+0.5363325363*g+0.0514459929*b),m=Math.cbrt(0.2119034982*r+0.6806995451*g+0.1073969566*b),s=Math.cbrt(0.0883024619*r+0.2817188376*g+0.6299787005*b);
+  return [0.2104542553*l+0.7936177850*m-0.0040720468*s,1.9779984951*l-2.4285922050*m+0.4505937099*s,0.0259040371*l+0.7827717662*m-0.8086757660*s];
+}
+const dist=(a,b,mode)=>{const p=oklab(simLin(a,mode)),q=oklab(simLin(b,mode));return Math.hypot(p[0]-q[0],p[1]-q[1],p[2]-q[2])*100};
+const lum=hex=>{const l=hex2rgb(hex).map(toLin);return 0.2126*l[0]+0.7152*l[1]+0.0722*l[2]};
+const ink=hex=>lum(hex)>0.35?'#000':'#fff';
+
+function patternBg(i,color){
+  const k=ink(color),o=k==='#000'?0.55:0.7,s=`stroke='${k}' stroke-opacity='${o}' stroke-width='1.6' fill='none'`,f=`fill='${k}' fill-opacity='${o}'`;
+  const svg={
+    none:'',
+    hstripe:`<path d='M0 3h8' ${s}/>`,
+    vstripe:`<path d='M3 0v8' ${s}/>`,
+    diag:`<path d='M-2 2l4-4M0 8l8-8M6 10l4-4' ${s}/>`,
+    dots:`<circle cx='4' cy='4' r='1.3' ${f}/>`,
+    check:`<rect width='4' height='4' ${f}/><rect x='4' y='4' width='4' height='4' ${f}/>`,
+    zigzag:`<path d='M0 5l2-3 2 3 2-3 2 3' ${s}/>`,
+    grid:`<path d='M0 .8h8M.8 0v8' ${s}/>`,
+    xhatch:`<path d='M0 0l8 8M8 0l-8 8' ${s}/>`,
+    rings:`<circle cx='4' cy='4' r='2.4' ${s}/>`,
+    bdiag:`<path d='M-2 6l4 4M0 0l8 8M6 -2l4 4' ${s}/>`,
+    bigdot:`<circle cx='4' cy='4' r='2.6' ${f}/>`}[PAT[i]];
+  return svg?`url("data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'>${svg}</svg>`)}")`:'none';
+}
+
+// --- deal (random, not solver-checked; only visuals matter here) ---
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function deal(){
+  const r=rng(seed),bag=[];for(let c=0;c<K;c++)for(let j=0;j<CAP;j++)bag.push(c);
+  for(let i=bag.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[bag[i],bag[j]]=[bag[j],bag[i]]}
+  const fl=[];for(let i=0;i<K;i++)fl.push(bag.slice(i*CAP,i*CAP+CAP));
+  fl.push([0,0,0,0].map(()=>Math.floor(r()*K)).slice(0,0)); // empty
+  fl.push([]);
+  const q=[...Array(K).keys()].sort(()=>r()-0.5);
+  return {fl,q};
+}
+let D=deal();
+
+function layerHtml(c,isRunTop,h,mode){
+  const raw=PALETTES[pal].c[c],col=sim(raw,mode),k=ink(col);
+  let bg=col,extra='';
+  if(sym&&variant==='B')bg=`${patternBg(c,col)} , ${col}`;
+  const showG=sym&&(variant==='A'||(variant==='C'&&isRunTop));
+  if(showG)extra=`<span class="glyph" style="color:${k};font-size:${Math.max(7,Math.round(h*0.72))}px">${GLYPHS[c]}</span>`;
+  return {bg,extra};
+}
+function render(){
+  const P=PALETTES[pal].c,w=Math.round(lh*2.1),fh=lh*CAP+6;
+  $('lhv').textContent=lh;
+  // queue
+  const next=D.q.slice(0,4);
+  $('queue').innerHTML=next.map((c,i)=>{const sz=i?30:52,{bg,extra}=layerHtml(c,true,sz*0.75,cvd);
+    return `<div class="chip${i?'':' head'}" style="background:${bg.includes('url')?bg:bg}"><div style="position:absolute;inset:0;display:flex;align-items:center;justify-content:center">${sym&&variant!=='B'?`<span class="glyph" style="color:${ink(sim(P[c],cvd))};font-size:${Math.round(sz*0.55)}px">${GLYPHS[c]}</span>`:''}</div></div>`}).join('')+`<span style="opacity:.6">+${D.q.length-4}</span>`;
+  // board
+  $('board').innerHTML=D.fl.map(f=>{
+    const ls=f.map((c,i)=>{const top=i===f.length-1||f[i+1]!==c;const {bg,extra}=layerHtml(c,top,lh,cvd);
+      return `<div class="layer" style="bottom:${i*lh}px;height:${lh}px;background:${bg}">${extra}</div>`}).join('');
+    return `<div class="flask" style="width:${w}px;height:${fh}px">${ls}</div>`}).join('');
+  // pairwise distances
+  const modes=['none','protan','deutan','tritan','achroma'];
+  let rows='',worst={};
+  for(const m of modes){let mn=1e9,pair='';for(let i=0;i<K;i++)for(let j=i+1;j<K;j++){const d=dist(P[i],P[j],m);if(d<mn){mn=d;pair=`${PALETTES[pal].n[i]}/${PALETTES[pal].n[j]}`}}worst[m]=[mn,pair]}
+  const cur=cvd;
+  let head='<tr><th></th>'+P.map((c,i)=>`<th><span class="sw" style="background:${sim(c,cur)}"></span><br>${GLYPHS[i]}</th>`).join('')+'</tr>';
+  for(let i=0;i<K;i++){rows+=`<tr><th><span class="sw" style="background:${sim(P[i],cur)}"></span> ${PALETTES[pal].n[i]}</th>`;
+    for(let j=0;j<K;j++){if(i===j){rows+='<td>—</td>';continue}const d=dist(P[i],P[j],cur);rows+=`<td class="${d<8?'bad':d<14?'warn':''}">${d.toFixed(0)}</td>`}rows+='</tr>'}
+  $('pairs').innerHTML=`<b>${PALETTES[pal].name}</b> — min OKLab ΔE×100 per vision: `+
+    modes.map(m=>`<span style="margin-right:10px">${m}: <b class="${worst[m][0]<8?'bad':worst[m][0]<14?'warn':''}">${worst[m][0].toFixed(1)}</b> (${worst[m][1]})</span>`).join('')+
+    `<br>Pairwise under <b>${cur}</b> (red &lt; 8 ≈ confusable, amber &lt; 14 ≈ risky at small size):<table>${head}${rows}</table>`;
+  $('vlabel').textContent=`${variant} (${VARIANTS[variant]})`;
+  $('info').textContent=`seed ${seed}`;
+  const p=new URLSearchParams({variant,palette:pal,cvd,lh,seed,sym:sym?1:0});history.replaceState(null,'','?'+p);
+}
+for(const k in PALETTES)$('palette').add(new Option(PALETTES[k].name,k));
+$('palette').value=pal;$('cvd').value=cvd;$('lh').value=lh;$('sym').checked=sym;
+$('palette').onchange=e=>{pal=e.target.value;render()};
+$('cvd').onchange=e=>{cvd=e.target.value;render()};
+$('lh').oninput=e=>{lh=+e.target.value;render()};
+$('sym').onchange=e=>{sym=e.target.checked;render()};
+$('reseed').onclick=()=>{seed++;D=deal();render()};
+const VK=Object.keys(VARIANTS);
+const cyc=d=>{variant=VK[(VK.indexOf(variant)+d+VK.length)%VK.length];render()};
+$('prev').onclick=()=>cyc(-1);$('next').onclick=()=>cyc(1);
+addEventListener('keydown',e=>{if(e.target.matches('input,select'))return;if(e.key==='ArrowLeft')cyc(-1);if(e.key==='ArrowRight')cyc(1)});
+render();
+</script></body></html>
