@@ -4,7 +4,7 @@
 <!--
   THROWAWAY PROTOTYPE for wayfinder ticket "Prototype 12-color palette with colorblind symbols".
   Question: which 12 Colors + per-Color symbols/patterns stay distinguishable for CVD at small Layer sizes?
-  Variants (?variant=A|B|C): A = glyph on every Layer, B = pattern overlay on every Layer, C = glyph only on top Layer of each run.
+  Variants (?variant=A|B|C): A = glyph on every Layer, B = pattern overlay on every Layer, C = hybrid: pattern on every Layer + glyph on top Layer of each run and in Goal Queue.
   Other params: palette=P1|P2|P3, cvd=none|protan|deutan|tritan|achroma, lh=<layer px>, seed=N, sym=0|1.
   Arrow keys / yellow pill switch variants.
 -->
@@ -54,7 +54,7 @@ const GLYPHS=['●','▲','■','◆','★','✚','♥','☾','✖','♣','⬟',
 // patterns as SVG data URIs (drawn in contrasting ink)
 const PAT=['none','hstripe','vstripe','diag','dots','check','zigzag','grid','xhatch','rings','bdiag','bigdot'];
 const params=new URLSearchParams(location.search);
-const VARIANTS={A:'Glyph on every Layer',B:'Pattern on every Layer',C:'Glyph on top Layer of each run'};
+const VARIANTS={A:'Glyph on every Layer',B:'Pattern on every Layer',C:'Hybrid: pattern on every Layer + glyph on top Layer of each run'};
 let variant=params.get('variant')||'A', pal=params.get('palette')||'P1', cvd=params.get('cvd')||'none';
 let lh=+(params.get('lh')||22), seed=+(params.get('seed')||1), sym=params.get('sym')!=='0';
 const K=12,CAP=4,EMPTY=2;
@@ -97,7 +97,7 @@ function patternBg(i,color){
     rings:`<circle cx='4' cy='4' r='2.4' ${s}/>`,
     bdiag:`<path d='M-2 6l4 4M0 0l8 8M6 -2l4 4' ${s}/>`,
     bigdot:`<circle cx='4' cy='4' r='2.6' ${f}/>`}[PAT[i]];
-  return svg?`url("data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'>${svg}</svg>`)}")`:'none';
+  return svg?`url('data:image/svg+xml;utf8,${encodeURIComponent(`<svg xmlns='http://www.w3.org/2000/svg' width='8' height='8'>${svg}</svg>`).replace(/'/g,'%27')}')`:'none';
 }
 
 // --- deal (random, not solver-checked; only visuals matter here) ---
@@ -116,7 +116,7 @@ let D=deal();
 function layerHtml(c,isRunTop,h,mode){
   const raw=PALETTES[pal].c[c],col=sim(raw,mode),k=ink(col);
   let bg=col,extra='';
-  if(sym&&variant==='B')bg=`${patternBg(c,col)} , ${col}`;
+  if(sym&&variant!=='A')bg=`${patternBg(c,col)} , ${col}`;
   const showG=sym&&(variant==='A'||(variant==='C'&&isRunTop));
   if(showG)extra=`<span class="glyph" style="color:${k};font-size:${Math.max(7,Math.round(h*0.72))}px">${GLYPHS[c]}</span>`;
   return {bg,extra};
