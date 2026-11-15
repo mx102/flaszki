@@ -8,7 +8,7 @@
 
 **Pour**: a player move from a source Flask to a target Flask. Moves all contiguous same-Color top Layers of the source that fit into the target.
 
-**Level**: one puzzle instance: an initial arrangement of Flasks plus a Goal Queue. Identified by its Level Number; Level N is identical on every device.
+**Level**: one puzzle instance: an initial arrangement of Flasks plus a Goal Queue. Identified by its Level Number; Level N is identical on every device running the same version of the game; an update may change it.
 
 **Level Number**: the player's progress counter; also determines the Level's content.
 
