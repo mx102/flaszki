@@ -1,0 +1,319 @@
+<!DOCTYPE html>
+<!--
+  PROTOTYPE — throwaway. Wayfinder ticket "Prototype pour interaction and Goal Queue UI" (#7).
+  Question: how should Pour input, Goal Queue display (next 4), sealing/removal of a
+  Completed Flask and board shrinking look and feel?
+  Plain HTML/JS, not Flutter/Flame (Flutter not installed; question is feel, not stack).
+  Three variants via ?variant=A|B|C (also ?colors=4..12&seed=N). Arrow keys / bottom pill switch.
+-->
+<html><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,maximum-scale=1,user-scalable=no">
+<title>PROTOTYPE – Flaszki pour + Goal Queue UI</title>
+<style>
+html,body{margin:0;height:100%;background:#1b1d2a;color:#eee;font-family:system-ui,sans-serif;overflow:hidden;touch-action:none;user-select:none;-webkit-user-select:none}
+#hud{position:absolute;left:0;right:0;top:0;height:44px;display:flex;gap:6px;align-items:center;padding:0 8px;font-size:13px;z-index:30}
+#hud button,#hud select{background:#2d3045;color:#eee;border:1px solid #444a66;border-radius:6px;padding:5px 9px;font-size:13px}
+#info{margin-left:auto;opacity:.75;font-variant-numeric:tabular-nums;text-align:right;font-size:12px}
+#board{position:absolute;left:0;right:0;top:44px;bottom:60px}
+.flask{position:absolute;border:3px solid rgba(255,255,255,.7);border-top:none;border-radius:0 0 16px 16px;box-sizing:border-box;
+  transition:left .35s,top .35s,width .35s,height .35s,transform .25s,opacity .3s,box-shadow .2s;transform-origin:top center;cursor:pointer}
+.flask .inner{position:absolute;inset:0;overflow:hidden;border-radius:0 0 13px 13px}
+.flask.sel{transform:translateY(-18px);box-shadow:0 0 0 2px #fff8,0 8px 16px #0008}
+.flask.shake{animation:shake .25s}
+@keyframes shake{25%{translate:-5px 0}75%{translate:5px 0}}
+.layer{position:absolute;left:0;right:0;transition:bottom .2s,height .2s}
+.cork{position:absolute;left:12%;right:12%;top:-12px;height:14px;background:#b5835a;border-radius:3px;transform:translateY(-40px);opacity:0;transition:transform .22s cubic-bezier(.3,1.6,.6,1),opacity .15s}
+.cork.in{transform:none;opacity:1}
+.cork.hover{transform:translateY(-14px);opacity:.55}
+.badge{position:absolute;right:-10px;top:-24px;background:#fff;color:#000;font-weight:700;font-size:11px;border-radius:9px;padding:1px 5px}
+.flask.waitB{animation:pulse 1.2s infinite}
+@keyframes pulse{50%{box-shadow:0 0 14px 4px var(--c)}}
+.flask.glow{box-shadow:0 0 24px 8px var(--c)}
+.flask.hot{box-shadow:0 0 0 3px #fff}
+.stream{position:absolute;width:6px;border-radius:3px;z-index:9}
+/* queue A: top strip */
+.qA{position:absolute;left:0;right:0;top:0;height:70px;display:flex;align-items:center;justify-content:center;gap:12px}
+.qA .chip{width:28px;height:28px;border-radius:50%;border:2px solid #fff6;transition:transform .2s}
+.qA .chip.qhead{width:46px;height:46px;border:3px solid #fff;position:relative}
+.qA .chip.qhead:after{content:"NEXT";position:absolute;top:50px;left:50%;transform:translateX(-50%);font-size:10px;letter-spacing:1px;opacity:.7}
+.qA .chip.pop{transform:scale(1.3)}
+.more{opacity:.6;font-size:13px}
+/* queue B: right rail */
+.qB{position:absolute;right:0;top:0;bottom:0;width:78px;display:flex;flex-direction:column;align-items:center;gap:10px;padding-top:16px;background:#ffffff08;border-left:1px solid #ffffff14}
+.qB .drop{width:30px;height:30px;border-radius:50% 50% 50% 0;transform:rotate(-45deg);border:2px solid #fff5}
+.qB .drop.qhead{width:46px;height:46px;border:3px solid #fff}
+.qB .lbl{font-size:10px;opacity:.6;letter-spacing:1px}
+/* queue C: bottom shelf of ghost flasks */
+.qC{position:absolute;left:0;right:0;bottom:0;height:104px;display:flex;align-items:flex-end;justify-content:center;gap:14px;padding-bottom:8px;border-top:4px solid #5a4636;background:linear-gradient(#3a2e2433,#0000)}
+.qC .ghost{width:30px;height:72px;border:2px dashed #fff6;border-top:none;border-radius:0 0 10px 10px;position:relative;animation:slidein .3s}
+.qC .ghost.qhead{border:3px solid #fff;border-top:none;width:36px;height:86px}
+.qC .ghost .fill{position:absolute;left:0;right:0;bottom:0;height:100%;opacity:.35;border-radius:0 0 8px 8px}
+.qC .ghost.qhead .fill{opacity:.6}
+.qC .ghost.qhead:before{content:"next";position:absolute;top:-16px;left:50%;transform:translateX(-50%);font-size:10px;opacity:.7}
+@keyframes slidein{from{translate:30px 0;opacity:0}}
+#win{position:absolute;inset:0;display:none;align-items:center;justify-content:center;flex-direction:column;background:#000a;z-index:40;font-size:28px;gap:14px}
+#win button{font-size:18px;padding:8px 18px;border-radius:8px;border:none}
+#toast{position:absolute;left:50%;top:60px;transform:translateX(-50%);background:#000c;padding:6px 12px;border-radius:8px;font-size:13px;opacity:0;transition:opacity .3s;z-index:40;pointer-events:none}
+/* prototype switcher: deliberately NOT part of the design */
+#switcher{position:fixed;left:50%;bottom:10px;transform:translateX(-50%);display:flex;align-items:center;gap:8px;background:#ff0;color:#000;border-radius:999px;padding:6px 10px;font:600 13px system-ui;box-shadow:0 4px 14px #000a;z-index:50;white-space:nowrap}
+#switcher button{background:#000;color:#ff0;border:none;border-radius:50%;width:28px;height:28px;font-size:16px;cursor:pointer}
+</style></head><body>
+<div id="hud">
+  <button id="undo">↶ Undo</button><button id="restart">⟲ Restart</button><button id="next">New</button>
+  <select id="colors"></select>
+  <div id="info"></div>
+</div>
+<div id="board"></div>
+<div id="win"><div>Solved!</div><div id="winmoves" style="font-size:16px"></div><button id="winnext">Next level</button></div>
+<div id="toast"></div>
+<div id="switcher"><button id="prev">‹</button><span id="vlabel"></span><button id="fwd">›</button></div>
+<script>
+const CAP=4;
+const PALETTE=['#e6194b','#3cb44b','#ffe119','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#9a6324','#f4f4f4'];
+const VARIANTS={A:'Tap-tap · top strip · fly-to-queue · reflow',B:'Drag · side rail · shrink-fade · zoom-to-fit',C:'1-tap auto-pour · shelf · slide-to-shelf · fixed slots'};
+const KEYS=Object.keys(VARIANTS);
+const params=new URLSearchParams(location.search);
+let variant=KEYS.includes(params.get('variant'))?params.get('variant'):'A';
+let K=Math.min(12,Math.max(3,+(params.get('colors')||7)));
+let seed=+(params.get('seed')||1);
+const sleep=ms=>new Promise(r=>setTimeout(r,ms));
+const $=id=>document.getElementById(id);
+const board=$('board');
+
+// ---------- rules ----------
+function rng(a){return()=>{a|=0;a=a+0x6D2B79F5|0;let t=Math.imul(a^a>>>15,1|a);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296}}
+function shuffle(a,r){for(let i=a.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[a[i],a[j]]=[a[j],a[i]]}return a}
+const top=f=>f[f.length-1];
+const isComplete=f=>f.length===CAP&&f.every(x=>x===f[0]);
+const canPour=(a,b)=>a.length>0&&b.length<CAP&&(!b.length||top(b)===top(a));
+function pour(a,b){const c=top(a);let n=0;while(a.length&&top(a)===c&&b.length<CAP){b.push(a.pop());n++}return n}
+function autoSeal(fl,q,qi){while(qi<q.length){const i=fl.findIndex(f=>isComplete(f)&&f[0]===q[qi]);if(i<0)break;fl.splice(i,1);qi++}return qi}
+function solvable(fl0,q){
+  const seen=new Set();let nodes=0;
+  const dfs=(fl,qi)=>{
+    if(qi===q.length)return true;
+    if(++nodes>150000)return false;
+    const k=qi+'|'+fl.map(f=>f.join(',')).sort().join('/');if(seen.has(k))return false;seen.add(k);
+    for(let i=0;i<fl.length;i++)for(let j=0;j<fl.length;j++){
+      if(i===j||!canPour(fl[i],fl[j]))continue;
+      if(!fl[j].length&&fl[i].every(x=>x===fl[i][0]))continue;
+      const nf=fl.map(f=>f.slice());pour(nf[i],nf[j]);
+      if(dfs(nf,autoSeal(nf,q,qi)))return true;
+    }return false};
+  const f=fl0.map(x=>x.slice());return dfs(f,autoSeal(f,q,0));
+}
+function genLevel(K,seed){
+  let last;
+  for(let s=seed*1000,tries=0;tries<40;s++,tries++){
+    const r=rng(s);
+    const queue=shuffle([...Array(K).keys()],r);
+    if(K>=4){const c=queue[Math.floor(r()*K/2)];queue.splice(Math.ceil(K/2)+Math.floor(r()*K/2),0,c)} // one repeated Color
+    const layers=shuffle(queue.flatMap(c=>Array(CAP).fill(c)),r);
+    const fl=queue.map((_,i)=>layers.slice(i*CAP,i*CAP+CAP));fl.push([],[]);
+    if(fl.some(isComplete))continue;
+    last={fl,queue};
+    if(solvable(fl,queue))return last;
+  }
+  return last; // prototype: give up, maybe unsolvable
+}
+
+// ---------- state ----------
+let G,busy=false,sel=null;
+const els=new Map();
+function newGame(){
+  const L=genLevel(K,seed);
+  G={flasks:L.fl.map((l,i)=>({id:i,slot:i,layers:l})),queue:L.queue,moves:0,hist:[],total:L.queue.length,n0:L.fl.length};
+  G.init=JSON.stringify({flasks:G.flasks,queue:G.queue,moves:0});
+  sel=null;$('win').style.display='none';fullRender();
+}
+const snap=()=>JSON.stringify({flasks:G.flasks,queue:G.queue,moves:G.moves});
+function restore(s){Object.assign(G,JSON.parse(s));sel=null;fullRender()}
+
+// ---------- layout ----------
+function areaFor(){
+  const W=board.clientWidth,H=board.clientHeight;
+  if(variant==='A')return{x:0,y:82,W,H:H-82};
+  if(variant==='B')return{x:0,y:20,W:W-78,H:H-20};
+  return{x:0,y:16,W,H:H-16-110};
+}
+function fit(n,a){let best=null;for(let c=1;c<=n;c++){const r=Math.ceil(n/c);const w=Math.min(a.W/c*0.6,a.H/r/3.4,70);if(!best||w>best.w)best={w,c}}return best}
+function grid(n,i,f,a){
+  const w=f.w,h=w*2.6,cw=w/0.6,ch=h*1.3,r=Math.ceil(n/f.c),row=Math.floor(i/f.c),cnt=row<r-1?f.c:n-(r-1)*f.c,col=i-row*f.c;
+  return{x:a.x+(a.W-cnt*cw)/2+col*cw+(cw-w)/2,y:a.y+(a.H-r*ch)/2+row*ch+(ch-h)/2,w,h};
+}
+function layout(){
+  const a=areaFor();const n=G.flasks.length;
+  const f=variant==='B'?fit(n,a):fit(G.n0,a);
+  G.flasks.forEach((fl,i)=>{
+    const p=variant==='A'?grid(n,i,f,a):variant==='B'?grid(n,i,f,a):grid(G.n0,fl.slot,f,a);
+    const el=els.get(fl.id);el._p=p;
+    Object.assign(el.style,{left:p.x+'px',top:p.y+'px',width:p.w+'px',height:p.h+'px'});
+    renderLayers(el,fl);
+  });
+}
+function renderLayers(el,fl){
+  const lh=(el._p.h-3)*0.85/CAP;
+  el.querySelector('.inner').innerHTML=fl.layers.map((c,i)=>`<div class="layer" style="bottom:${i*lh}px;height:${lh+0.5}px;background:${PALETTE[c]}"></div>`).join('');
+  // waiting Completed Flask (off-head)
+  const done=isComplete(fl.layers);
+  el.style.setProperty('--c',done?PALETTE[fl.layers[0]]:'#fff');
+  el.classList.toggle('waitB',done&&variant==='B');
+  let cork=el.querySelector('.cork'),badge=el.querySelector('.badge');
+  if(done&&variant!=='B'){
+    if(!cork){cork=document.createElement('div');cork.className='cork hover';el.appendChild(cork)}
+    const qi=G.queue.indexOf(fl.layers[0]);
+    if(variant==='A'){if(!badge){badge=document.createElement('div');badge.className='badge';el.appendChild(badge)}badge.textContent=qi<0?'–':qi<4?'#'+(qi+1):'…'}
+    if(variant==='C'){if(!badge){badge=document.createElement('div');badge.className='badge';el.appendChild(badge)}badge.textContent='✓'}
+  }else{cork&&!cork.classList.contains('in')&&cork.remove();badge&&badge.remove()}
+}
+function renderQueue(){
+  let q=board.querySelector('.q');if(q)q.remove();
+  q=document.createElement('div');q.className='q q'+variant;board.appendChild(q);
+  const next=G.queue.slice(0,4),more=G.queue.length-next.length;
+  if(variant==='A'){q.innerHTML=next.map((c,i)=>`<div class="chip${i?'':' qhead'}" style="background:${PALETTE[c]}"></div>`).join('')+(more?`<span class="more">+${more}</span>`:'')}
+  if(variant==='B'){q.innerHTML=`<div class="lbl">GOAL</div>`+next.map((c,i)=>`<div class="drop${i?'':' qhead'}" style="background:${PALETTE[c]}"></div>`).join('')+(more?`<span class="more">+${more}</span>`:'')+`<div class="lbl" style="margin-top:auto;margin-bottom:12px">${G.total-G.queue.length}/${G.total}</div>`}
+  if(variant==='C'){q.innerHTML=next.map((c,i)=>`<div class="ghost${i?'':' qhead'}"><div class="fill" style="background:${PALETTE[c]}"></div></div>`).join('')+(more?`<span class="more" style="align-self:center">+${more}</span>`:'')}
+}
+function fullRender(){
+  board.innerHTML='';els.clear();
+  for(const fl of G.flasks){
+    const el=document.createElement('div');el.className='flask';el.innerHTML='<div class="inner"></div>';el.dataset.id=fl.id;
+    board.appendChild(el);els.set(fl.id,el);
+  }
+  // no transition on first placement
+  els.forEach(el=>el.style.transition='none');
+  renderQueue();layout();
+  board.offsetWidth;els.forEach(el=>el.style.transition='');
+  info();
+}
+function info(){
+  $('info').innerHTML=`seed ${seed} · ${K} Colors · moves ${G.moves}<br>queue: ${G.queue.map(c=>`<span style="color:${PALETTE[c]}">●</span>`).join('')||'—'}`;
+}
+function rel(node){const b=board.getBoundingClientRect(),r=node.getBoundingClientRect();return{x:r.left-b.left,y:r.top-b.top,w:r.width,h:r.height}}
+function toast(t){const e=$('toast');e.textContent=t;e.style.opacity=1;clearTimeout(toast.t);toast.t=setTimeout(()=>e.style.opacity=0,1200)}
+function shake(el){el.classList.remove('shake');el.offsetWidth;el.classList.add('shake')}
+
+// ---------- pour + seal ----------
+async function doPour(si,ti){
+  busy=true;G.hist.push(snap());
+  const s=G.flasks[si],t=G.flasks[ti],se=els.get(s.id),te=els.get(t.id),sp=se._p,tp=te._p;
+  const dir=tp.x>=sp.x?1:-1;
+  se.classList.remove('sel');se.style.zIndex=10;
+  se.style.transform=`translate(${tp.x-sp.x-dir*tp.w*0.15}px,${tp.y-sp.y-tp.h*0.18}px) rotate(${dir*72}deg)`;
+  await sleep(230);
+  const color=top(s.layers),lh=(tp.h-3)*0.85/CAP;
+  const st=document.createElement('div');st.className='stream';
+  Object.assign(st.style,{background:PALETTE[color],left:(tp.x+tp.w/2-3)+'px',top:(tp.y-tp.h*0.12)+'px',height:(tp.h*1.12-t.layers.length*lh-6)+'px'});
+  board.appendChild(st);
+  pour(s.layers,t.layers);G.moves++;renderLayers(se,s);renderLayers(te,t);
+  await sleep(200);st.remove();
+  se.style.transform='';await sleep(200);se.style.zIndex='';
+  await processSeals();
+  layout();info();
+  if(!G.queue.length){$('winmoves').textContent=`${G.moves} moves`;$('win').style.display='flex'}
+  busy=false;
+}
+const SEAL={
+  A:async(fl,el)=>{
+    const cork=el.querySelector('.cork')||Object.assign(document.createElement('div'),{className:'cork'});el.appendChild(cork);
+    cork.classList.remove('hover');el.offsetWidth;cork.classList.add('in');await sleep(260);
+    const head=board.querySelector('.qhead'),hr=rel(head),p=el._p;
+    el.style.transformOrigin='center';el.style.transition='transform .45s cubic-bezier(.5,-.3,.7,1),opacity .45s';
+    el.style.transform=`translate(${hr.x+hr.w/2-p.x-p.w/2}px,${hr.y+hr.h/2-p.y-p.h/2}px) scale(.2)`;el.style.opacity=0;
+    await sleep(430);head.classList.add('pop');await sleep(150);
+  },
+  B:async(fl,el)=>{
+    el.classList.remove('waitB');el.classList.add('glow');await sleep(250);
+    el.style.transformOrigin='center';el.style.transform='scale(0)';el.style.opacity=0;await sleep(320);
+  },
+  C:async(fl,el)=>{
+    const cork=el.querySelector('.cork')||Object.assign(document.createElement('div'),{className:'cork'});el.appendChild(cork);
+    cork.classList.remove('hover');el.offsetWidth;cork.classList.add('in');await sleep(260);
+    const head=board.querySelector('.qhead'),hr=rel(head),p=el._p;
+    el.style.transition='transform .5s cubic-bezier(.4,0,.2,1),opacity .3s .35s';
+    el.style.transform=`translate(${hr.x+hr.w/2-p.x-p.w/2}px,${hr.y+hr.h-p.y-p.h}px)`;el.style.opacity=0;
+    await sleep(600);
+  },
+};
+async function processSeals(){
+  for(;;){
+    const i=G.flasks.findIndex(f=>isComplete(f.layers)&&f.layers[0]===G.queue[0]);if(i<0||!G.queue.length)return;
+    const fl=G.flasks[i];await SEAL[variant](fl,els.get(fl.id));
+    els.get(fl.id).remove();els.delete(fl.id);G.flasks.splice(i,1);G.queue.shift();
+    renderQueue();layout();info();await sleep(variant==='C'?50:280);
+  }
+}
+
+// ---------- input ----------
+const idxOf=el=>G.flasks.findIndex(f=>f.id===+el.dataset.id);
+function onTap(i){
+  if(busy)return;
+  if(variant==='A'){
+    const el=els.get(G.flasks[i].id);
+    if(sel===null){if(G.flasks[i].layers.length){sel=i;el.classList.add('sel')}else shake(el);return}
+    const sEl=els.get(G.flasks[sel].id);
+    if(sel===i){sel=null;el.classList.remove('sel');return}
+    if(canPour(G.flasks[sel].layers,G.flasks[i].layers)){const s=sel;sel=null;doPour(s,i);return}
+    shake(el);sEl.classList.remove('sel');sel=null;
+    if(G.flasks[i].layers.length){sel=i;el.classList.add('sel')} // switch selection
+  }
+  if(variant==='B')toast('Drag a Flask onto another to Pour');
+  if(variant==='C'){
+    const s=G.flasks[i].layers;let best=-1,bs=-1;
+    G.flasks.forEach((t,j)=>{
+      if(j===i||!canPour(s,t.layers))return;
+      if(!t.layers.length&&s.every(x=>x===s[0]))return;
+      let run=0;for(let k=s.length-1;k>=0&&s[k]===top(s);k--)run++;
+      const sc=(t.layers.length?10:0)+(CAP-t.layers.length>=run?5:0)+t.layers.length;
+      if(sc>bs){bs=sc;best=j}
+    });
+    if(best<0)shake(els.get(G.flasks[i].id));else doPour(i,best);
+  }
+}
+let drag=null;
+board.addEventListener('pointerdown',e=>{
+  const el=e.target.closest('.flask');
+  if(!el){if(sel!==null&&variant==='A'){els.get(G.flasks[sel].id).classList.remove('sel');sel=null}return}
+  if(busy)return;
+  drag={el,i:idxOf(el),x0:e.clientX,y0:e.clientY,moved:false,hot:-1};board.setPointerCapture(e.pointerId);
+});
+board.addEventListener('pointermove',e=>{
+  if(!drag)return;const dx=e.clientX-drag.x0,dy=e.clientY-drag.y0;
+  if(Math.hypot(dx,dy)>8)drag.moved=true;
+  if(variant!=='B'||!drag.moved||!G.flasks[drag.i].layers.length)return;
+  const el=drag.el;el.style.transition='none';el.style.zIndex=10;
+  let hot=-1;
+  G.flasks.forEach((f,j)=>{if(j===drag.i)return;const r=els.get(f.id).getBoundingClientRect();
+    if(e.clientX>r.left-12&&e.clientX<r.right+12&&e.clientY>r.top-60&&e.clientY<r.bottom)hot=j});
+  const ok=hot>=0&&canPour(G.flasks[drag.i].layers,G.flasks[hot].layers);
+  els.forEach(x=>x.classList.remove('hot'));if(ok)els.get(G.flasks[hot].id).classList.add('hot');
+  drag.hot=ok?hot:-1;
+  el.style.transform=`translate(${dx}px,${dy}px) rotate(${ok?(els.get(G.flasks[hot].id)._p.x>=el._p.x?25:-25):0}deg)`;
+});
+board.addEventListener('pointerup',e=>{
+  if(!drag)return;const d=drag;drag=null;
+  els.forEach(x=>x.classList.remove('hot'));
+  if(variant==='B'&&d.moved){d.el.style.transition='';
+    if(d.hot>=0)doPour(d.i,d.hot);else{d.el.style.transform='';d.el.style.zIndex=''}return}
+  if(!d.moved)onTap(d.i);
+});
+
+// ---------- hud / switcher ----------
+for(let k=3;k<=12;k++)$('colors').add(new Option(k+' Colors',k));
+$('colors').value=K;
+$('colors').onchange=e=>{K=+e.target.value;seed=1;syncUrl();newGame()};
+$('undo').onclick=()=>{if(!busy&&G.hist.length)restore(G.hist.pop())};
+$('restart').onclick=()=>{if(!busy){const h=G.hist;restore(G.init);G.hist=[]}};
+$('next').onclick=$('winnext').onclick=()=>{if(busy)return;seed++;syncUrl();newGame()};
+function syncUrl(){const p=new URLSearchParams({variant,colors:K,seed});history.replaceState(null,'','?'+p)}
+function setVariant(v){
+  if(busy)return;variant=v;syncUrl();$('vlabel').textContent=`${v} · ${VARIANTS[v]}`;
+  if(G){sel=null;fullRender()}
+}
+const step=d=>setVariant(KEYS[(KEYS.indexOf(variant)+d+KEYS.length)%KEYS.length]);
+$('prev').onclick=()=>step(-1);$('fwd').onclick=()=>step(1);
+addEventListener('keydown',e=>{if(e.target.closest('input,textarea,[contenteditable]'))return;
+  if(e.key==='ArrowLeft')step(-1);if(e.key==='ArrowRight')step(1);if(e.key==='z'||e.key==='u')$('undo').click()});
+addEventListener('resize',()=>G&&layout());
+setVariant(variant);newGame();
+</script></body></html>
