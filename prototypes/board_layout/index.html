@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<!-- PROTOTYPE (throwaway, never merge). Ticket: "Prototype board layout for up to 16 Flasks on a small phone".
+     Question: does the max board (16 Flasks, cap 4) fit on small phones with Goal Queue strip,
+     Layer >= 15 px and tap targets >= 44 px? Which grid + Flask size rule?
+     Variants (?variant=A|B|C):
+       A Auto grid   - try every column count, pick the one giving the biggest Layer; size depends on Flask count.
+       B Two shelves - at most 2 rows (portrait) / 1 row if it fits (landscape); Flasks get thin, never a 3rd row.
+       C Fixed size  - Flask size always computed as if 16 Flasks (max board); small Levels just sit centred.
+     Other params: n=3..20 Flasks, view=one|all, dev=<preset index>, ratio=<glass width / Layer>, hit=1 shows tap cells. -->
+<html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>PROTOTYPE board layout</title>
+<style>
+body{margin:0;font:13px system-ui,sans-serif;background:#222;color:#ddd}
+#ctl{position:sticky;top:0;background:#111;padding:8px;display:flex;gap:14px;flex-wrap:wrap;align-items:center;z-index:5}
+#ctl label{display:flex;gap:4px;align-items:center}
+#wrap{display:flex;flex-wrap:wrap;gap:22px;padding:16px;align-items:flex-start}
+.dev{display:flex;flex-direction:column;gap:6px}
+.scr{position:relative;background:#1d2b3a;outline:2px solid #555;border-radius:6px;overflow:hidden}
+.q{position:absolute;left:0;right:0;top:0;display:flex;align-items:center;gap:8px;padding:0 12px;background:#0003}
+.q .c{border-radius:50%;flex:none}
+.bar{position:absolute;left:0;right:0;bottom:0;display:flex;justify-content:center;gap:24px;align-items:center;background:#0003}
+.bar span{width:44px;height:44px;border-radius:50%;background:#fff2;display:grid;place-items:center}
+.cell{position:absolute;box-sizing:border-box}
+.hit .cell{outline:1px dashed #ff05}
+.glass{position:absolute;left:50%;transform:translateX(-50%);bottom:0;border:2px solid #cde;border-top:none;border-radius:0 0 40% 40%/0 0 18% 18%;box-sizing:content-box;display:flex;flex-direction:column-reverse;overflow:hidden;background:#fff1}
+.sel .glass{bottom:var(--lift)}
+.meta{font:12px/1.4 ui-monospace,monospace}
+.ok{color:#7d7}.bad{color:#f77;font-weight:bold}
+#sw{position:fixed;bottom:14px;left:50%;transform:translateX(-50%);background:#fff;color:#000;border-radius:99px;padding:6px 14px;display:flex;gap:12px;align-items:center;box-shadow:0 4px 16px #0008;z-index:9;font-weight:600}
+#sw button{border:none;background:#000;color:#fff;border-radius:50%;width:28px;height:28px;cursor:pointer}
+</style></head><body>
+<div id="ctl">
+  <b>PROTOTYPE</b>
+  <label>Flasks <input id="n" type="range" min="3" max="20"><span id="nv"></span></label>
+  <label>view <select id="view"><option value="all">all devices</option><option value="one">one device</option></select></label>
+  <label>device <select id="dev"></select></label>
+  <label>glass width/Layer <input id="ratio" type="range" min="1.6" max="3.2" step="0.1"><span id="rv"></span></label>
+  <label><input id="hit" type="checkbox"> show tap cells</label>
+  <span id="sum"></span>
+</div>
+<div id="wrap"></div>
+<div id="sw"><button id="prev">◀</button><span id="lbl"></span><button id="next">▶</button></div>
+<script>
+const PAL=['#e6194b','#3cb44b','#ffe119','#4363d8','#f58231','#911eb4','#42d4f4','#f032e6','#bfef45','#fabed4','#9a6324','#f4f4f4'];
+const DEV=[['iPhone SE1 / small Android',320,568,20,0],['Small Android',360,640,24,0],['iPhone SE2/3',375,667,20,0],['iPhone 15',393,852,59,34],
+ ['Large Android',412,915,24,24],['SE1 landscape',568,320,0,0],['Small Android landscape',640,360,0,0],['iPad portrait',768,1024,24,20],['Desktop window',1280,800,0,0],['Desktop small window',800,600,0,0]];
+const VAR={A:'Auto grid',B:'Two shelves',C:'Fixed size (as 16)'};
+const CAP=4, NECK=0.7, LIFT=0.9, GAPY=0.5, GAPX=0.5, QH=64, BH=60, PAD=8, LMAX=36;
+const P=new URLSearchParams(location.search);
+let S={variant:P.get('variant')||'A',n:+(P.get('n')||16),view:P.get('view')||'all',dev:+(P.get('dev')||0),ratio:+(P.get('ratio')||2.2),hit:P.get('hit')==='1'};
+const $=id=>document.getElementById(id);
+
+// Layer height L for c columns, r rows in area W x H
+function Lfor(c,r,W,H,ratio){return Math.min(W/(c*(ratio+GAPX)), H/(r*(CAP+NECK+LIFT+GAPY)))}
+function bestGrid(n,W,H,ratio,maxRows){let b=null;for(let c=1;c<=n;c++){const r=Math.ceil(n/c);if(r>maxRows)continue;const L=Lfor(c,r,W,H,ratio);
+  if(!b||L>b.L+0.01||(Math.abs(L-b.L)<0.01&&r<b.r))b={c,r,L}}return b}
+function plan(n,W,H,ratio){
+  const v=S.variant;let g;
+  if(v==='A')g=bestGrid(n,W,H,ratio,99);
+  else if(v==='B'){const land=W>H;g=bestGrid(n,W,H,ratio,(land&&n<=10)?1:2)}
+  else{g=bestGrid(n,W,H,ratio,99);const g16=bestGrid(16,W,H,ratio,99);g.L=Math.min(g.L,g16.L)}
+  g.L=Math.min(g.L,LMAX);return g}
+
+function rnd(s){return()=>{s=(s*1103515245+12345)&0x7fffffff;return s/0x7fffffff}}
+function deal(n){const k=Math.max(1,n-2),r=rnd(7);const pool=[];for(let i=0;i<k;i++)for(let j=0;j<CAP;j++)pool.push(PAL[i%12]);
+  for(let i=pool.length-1;i>0;i--){const j=Math.floor(r()*(i+1));[pool[i],pool[j]]=[pool[j],pool[i]]}
+  const f=[];for(let i=0;i<n;i++)f.push(i<k?pool.slice(i*CAP,i*CAP+CAP):[]);return f}
+
+function device(d){
+  const [name,w,h,st,sb]=d,W=w-2*PAD,H=h-st-sb-QH-BH-2*PAD;
+  const g=plan(S.n,W,H,S.ratio),L=g.L,gw=L*S.ratio,cw=L*(S.ratio+GAPX),ch=L*(CAP+NECK+LIFT+GAPY);
+  const box=document.createElement('div');box.className='dev';
+  const scr=document.createElement('div');scr.className='scr'+(S.hit?' hit':'');scr.style.width=w+'px';scr.style.height=h+'px';
+  const q=document.createElement('div');q.className='q';q.style.top=st+'px';q.style.height=QH+'px';
+  q.innerHTML=`<span class="c" style="width:48px;height:48px;background:${PAL[0]}"></span>`+[1,2,3].map(i=>`<span class="c" style="width:26px;height:26px;background:${PAL[i]}"></span>`).join('')+'<span>+8</span>';
+  scr.appendChild(q);
+  const bar=document.createElement('div');bar.className='bar';bar.style.height=BH+'px';bar.style.bottom=sb+'px';bar.innerHTML='<span>↶</span><span>⟲</span>';scr.appendChild(bar);
+  const fl=deal(S.n),top0=st+QH+PAD,gridH=g.r*ch,oy=top0+(H-gridH)/2;
+  fl.forEach((f,i)=>{const row=Math.floor(i/g.c),inRow=row<g.r-1?g.c:S.n-row*g.c,col=i-row*g.c;
+    const ox=PAD+(W-inRow*cw)/2;const cell=document.createElement('div');cell.className='cell'+(i===1?' sel':'');
+    Object.assign(cell.style,{left:ox+col*cw+'px',top:oy+row*ch+'px',width:cw+'px',height:ch+'px'});cell.style.setProperty('--lift',L*LIFT*0.8+'px');
+    const gl=document.createElement('div');gl.className='glass';Object.assign(gl.style,{width:gw+'px',height:L*(CAP+NECK)+'px',bottom:L*GAPY/2+'px'});
+    gl.innerHTML=f.map(c=>`<div style="height:${L}px;background:${c};flex:none"></div>`).join('');
+    cell.onclick=()=>{cell.classList.toggle('sel')};cell.appendChild(gl);scr.appendChild(cell)});
+  const okL=L>=15,okT=Math.min(cw,ch)>=44;
+  const meta=document.createElement('div');meta.className='meta';
+  meta.innerHTML=`<b>${name}</b> ${w}×${h}<br>grid ${g.c}×${g.r} · Layer <span class="${okL?'ok':'bad'}">${L.toFixed(1)}px</span> · glass ${gw.toFixed(0)}×${(L*(CAP+NECK)).toFixed(0)}<br>tap cell <span class="${okT?'ok':'bad'}">${cw.toFixed(0)}×${ch.toFixed(0)}</span>`;
+  box.append(meta,scr);return {box,okL,okT};
+}
+function render(){
+  const list=S.view==='all'?DEV:[DEV[S.dev]];$('wrap').innerHTML='';let fails=[];
+  list.forEach(d=>{const r=device(d);$('wrap').appendChild(r.box);if(!r.okL||!r.okT)fails.push(d[0])});
+  $('sum').innerHTML=fails.length?`<span class="bad">fails: ${fails.join(', ')}</span>`:'<span class="ok">all pass</span>';
+  $('lbl').textContent=`${S.variant} (${VAR[S.variant]})`;$('nv').textContent=S.n;$('rv').textContent=S.ratio;
+  history.replaceState(null,'','?'+new URLSearchParams({variant:S.variant,n:S.n,view:S.view,dev:S.dev,ratio:S.ratio,hit:S.hit?1:0}));
+}
+DEV.forEach((d,i)=>$('dev').add(new Option(`${d[0]} ${d[1]}×${d[2]}`,i)));
+$('n').value=S.n;$('view').value=S.view;$('dev').value=S.dev;$('ratio').value=S.ratio;$('hit').checked=S.hit;
+$('n').oninput=e=>{S.n=+e.target.value;render()};$('view').onchange=e=>{S.view=e.target.value;render()};
+$('dev').onchange=e=>{S.dev=+e.target.value;render()};$('ratio').oninput=e=>{S.ratio=+e.target.value;render()};$('hit').onchange=e=>{S.hit=e.target.checked;render()};
+const K=Object.keys(VAR);const cyc=d=>{S.variant=K[(K.indexOf(S.variant)+d+K.length)%K.length];render()};
+$('prev').onclick=()=>cyc(-1);$('next').onclick=()=>cyc(1);
+addEventListener('keydown',e=>{if(e.target.matches('input,select'))return;if(e.key==='ArrowLeft')cyc(-1);if(e.key==='ArrowRight')cyc(1)});
+render();
+</script></body></html>
