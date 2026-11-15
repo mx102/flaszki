@@ -21,3 +21,5 @@ A Color may appear in the Goal Queue more than once. Only the next 4 entries are
 **Solved**: a Level whose Goal Queue is empty.
 
 **Dead End**: a state from which the Level can no longer be Solved. Not a loss; the player can Undo or Restart.
+
+**Breather**: a Level deliberately easier than the Levels around it; a rest in the ramp of difficulty.
