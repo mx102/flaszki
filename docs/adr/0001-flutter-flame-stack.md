@@ -15,5 +15,5 @@ Targets: Android, iOS, macOS, Windows, Linux, plus web. Web is secondary: online
 ## Consequences
 
 - Splash physics and particles take more hand-written code than in Godot.
-- No isolates on web: the generator runs on the main thread there. ADR 0002 rules out a web worker and requires the wasm web build, not dart2js.
+- No isolates on web: the generator runs on the main thread there. ADR 0002 rules out a web worker and uses the wasm web build, with Flutter's dart2js fallback for browsers that lack the required Wasm features.
 - Revisit if the generator + solver performance prototype misses the ~200 ms budget by more than 2× on Dart AOT or web.

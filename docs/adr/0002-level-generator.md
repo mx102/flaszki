@@ -29,11 +29,11 @@ Returns the Level plus difficulty metrics: `B − C` merging Pours, solver nodes
 
 - Own PRNG: xoshiro128** seeded via SplitMix, Lemire bounded ints, 32-bit integer ops only, no floats (Dart `Random` and JS `Math.random` aren't stable across versions or platforms).
 - Fixed iteration order, no hash-map iteration order dependence.
-- `generatorVersion` is part of the seed. Golden tests pin Levels 1–100 on Dart VM, AOT and web; any intentional change to generator, curve, PRNG, node cap or retry cap bumps the version.
+- `generatorVersion` is part of the seed. Golden tests pin Levels 1–100 on Dart VM, AOT, wasm and dart2js; any intentional change to generator, curve, PRNG, node cap or retry cap bumps the version.
 
 ## Threading
 
-`generate()` is a pure synchronous function in the logic package. **Level N+1 is generated in the background as soon as Level N starts**, so its latency is hidden. Native runs it in an isolate (`compute`). Web runs it on the main thread, **no web worker**, and the web build **must be wasm** (dart2wasm), not dart2js.
+`generate()` is a pure synchronous function in the logic package. **Level N+1 is generated in the background as soon as Level N starts**, so its latency is hidden. Native runs it in an isolate (`compute`). Web runs it on the main thread, **no web worker**. The web build is `--wasm` with `wasmAllowList: { gecko: true, webkit: true }`; browsers lacking the required Wasm features run Flutter's bundled dart2js fallback (default for Chrome < 137). dart2js stays acceptable because the curve caps the board at 16 Flasks (12×1 worst case 39 ms on M4) and Level N+1 is pre-generated.
 
 Measured in the performance prototype (#6) on an Apple M4, Levels 1–200, with the hash key:
 
@@ -42,7 +42,7 @@ Measured in the performance prototype (#6) on an Apple M4, Levels 1–200, with 
 | 12 Colors × 1, 2 empty | 1.3 / 4.7 ms | 1.6 / 5.9 ms | 10 / 39 ms |
 | 12 Colors × 2, 2 empty | 5.2 / 37 ms | 6.8 / 49 ms | 53 / 444 ms |
 
-Low-end phones are estimated 10–20× slower (worst case ~0.4–0.75 s at 12 Colors × 2), which pre-generation in an isolate hides. dart2js is too slow on its 53-bit double math to run on the main thread. Level hashes matched across AOT, dart2js and wasm. Code and full tables: branch `prototype/generator-perf`.
+Low-end phones are estimated 10–20× slower (worst case ~0.4–0.75 s at 12 Colors × 2), which pre-generation in an isolate hides. dart2js is slower on its 53-bit double math; it is tolerated only as the fallback for browsers without the required Wasm features (amended during PRD review, #18; 12×2 never occurs per ADR 0004). Level hashes matched across AOT, dart2js and wasm. Code and full tables: branch `prototype/generator-perf`.
 
 ## Considered Options
 
