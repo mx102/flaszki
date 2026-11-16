@@ -1,0 +1,36 @@
+# Web deploy to Cloudflare Pages on every push to main (ADR 0007).
+# Needs repo secrets CLOUDFLARE_API_TOKEN (Cloudflare Pages: Edit) and
+# CLOUDFLARE_ACCOUNT_ID, and a Pages project named "flaszki" (Direct Upload).
+name: Deploy web
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: deploy-web
+  cancel-in-progress: true
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+      deployments: write
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: 3.50.0
+          cache: true
+      - run: flutter build web --wasm --release
+      - name: Serve PRIVACY.md on the site
+        run: cp PRIVACY.md build/web/PRIVACY.md
+      - uses: cloudflare/wrangler-action@v3
+        with:
+          apiToken: ${{ secrets.CLOUDFLARE_API_TOKEN }}
+          accountId: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
+          command: pages deploy build/web --project-name=flaszki --branch=main
+          gitHubToken: ${{ secrets.GITHUB_TOKEN }}
