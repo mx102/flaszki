@@ -24,8 +24,37 @@ dev_dependencies:
   flutter_test:
     sdk: flutter
   flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
 
 flutter:
   uses-material-design: true
   assets:
     - CREDITS.md
+  fonts:
+    - family: EB Garamond
+      fonts:
+        - asset: assets/fonts/EBGaramond.ttf
+        - asset: assets/fonts/EBGaramond-Italic.ttf
+          style: italic
+
+# App icon (all rights reserved, ADR 0003). Regenerate:
+#   flutter test tool/render_icon.dart && dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: assets/icon/icon.png
+  android: true
+  adaptive_icon_background: assets/icon/icon_background.png
+  adaptive_icon_foreground: assets/icon/icon_foreground.png
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: assets/icon/icon_rounded.png
+    background_color: '#0a1220'
+    theme_color: '#1a2f4d'
+  windows:
+    generate: true
+    image_path: assets/icon/icon_rounded.png
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: assets/icon/icon_macos.png

@@ -4,6 +4,7 @@ import 'package:flaszki/app.dart';
 import 'package:flaszki/src/save/key_value_store.dart';
 import 'package:flaszki/src/save/save_store.dart';
 import 'package:flaszki/src/ui/color_fill.dart';
+import 'package:flaszki/src/ui/style/orb_painter.dart';
 import 'package:flaszki_logic/flaszki_logic.dart';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/services.dart';
@@ -44,15 +45,11 @@ void main() {
     expect(_sheet, findsOneWidget);
   }
 
-  /// Painters of every Layer + orb fill.
-  Iterable<ColorFillPainter> fills(WidgetTester tester) => tester
-      .widgetList<CustomPaint>(
-        find.descendant(
-          of: find.byType(ColorFill),
-          matching: find.byType(CustomPaint),
-        ),
-      )
-      .map((c) => c.painter! as ColorFillPainter);
+  /// Painters of every Flask + Goal Queue orb.
+  Iterable<PatternedPainter> fills(WidgetTester tester) => tester
+      .widgetList<CustomPaint>(find.byType(CustomPaint))
+      .map((c) => c.painter)
+      .whereType<PatternedPainter>();
 
   setUp(() {
     disk = MemoryStore();
@@ -96,7 +93,12 @@ void main() {
     expect(
       find.descendant(
         of: find.byKey(const ValueKey('orb-next')),
-        matching: find.byType(ColorFill),
+        matching: find.byWidgetPredicate(
+          (w) =>
+              w is CustomPaint &&
+              w.painter is OrbPainter &&
+              (w.painter! as OrbPainter).patterned,
+        ),
       ),
       findsOneWidget,
     );

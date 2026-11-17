@@ -2,7 +2,7 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../save/save_store.dart';
-import 'placeholder_style.dart';
+import 'style/style_a.dart';
 
 /// `PRIVACY.md` as served on the Pages site (ADR 0007, deploy-web.yml).
 final privacyUri = Uri.parse('https://flaszki.pages.dev/PRIVACY.md');
@@ -19,7 +19,7 @@ Future<void> showSettingsSheet(
   String? version,
 }) => showModalBottomSheet<void>(
   context: context,
-  backgroundColor: PlaceholderStyle.background,
+  backgroundColor: StyleA.skyTop,
   showDragHandle: true,
   builder: (context) =>
       SettingsSheet(settings: settings, openUrl: openUrl, version: version),
