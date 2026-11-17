@@ -5,6 +5,7 @@ import '../play/board_layout.dart';
 import '../play/goal_queue_view.dart';
 import 'flask_view.dart';
 import 'shake.dart';
+import 'style/backdrop_painter.dart';
 
 /// Reflow / lift durations; short so input is never blocked (PRD §4.2).
 const reflowDuration = Duration(milliseconds: 250);
@@ -48,12 +49,17 @@ class BoardView extends StatelessWidget {
       );
       final waiting = waitingPositions(state);
       final l = metrics.layerHeight;
+      // Shelf line just under each row's glass bottoms (PRD §5).
+      final shelves = {
+        for (final c in cells) c.top + c.height - l * gapYRatio / 2 + l * 0.15,
+      }.toList();
       return Stack(
         children: [
           Positioned.fill(
             child: GestureDetector(
               behavior: HitTestBehavior.opaque,
               onTap: onTapEmpty,
+              child: CustomPaint(painter: ShelfPainter(shelves)),
             ),
           ),
           for (var k = 0; k < onBoard.length; k++)

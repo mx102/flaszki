@@ -12,7 +12,7 @@ import '../play/restart_arm.dart';
 import 'board_view.dart';
 import 'bottom_bar.dart';
 import 'goal_queue_strip.dart';
-import 'placeholder_style.dart';
+import 'style/style_a.dart';
 
 /// Solved overlay auto-advance delay (PRD §4.5).
 const solvedAutoAdvance = Duration(seconds: 2);
@@ -177,7 +177,7 @@ class _LevelScreenState extends State<LevelScreen> {
           return KeyEventResult.ignored;
         },
         child: Material(
-          color: PlaceholderStyle.background,
+          type: MaterialType.transparency,
           child: SafeArea(
             child: play == null
                 ? const SizedBox.expand()
@@ -242,11 +242,15 @@ class _SolvedOverlay extends StatelessWidget {
     behavior: HitTestBehavior.opaque,
     onTap: onTap,
     child: ColoredBox(
-      color: const Color(0x88000000),
-      child: Center(
+      color: StyleA.scrim,
+      child: Align(
+        alignment: const Alignment(0, -0.16),
         child: Text(
           'Solved',
-          style: PlaceholderStyle.serifItalic.copyWith(fontSize: 48),
+          style: StyleA.serifItalic.copyWith(
+            fontSize: 48,
+            color: StyleA.solved,
+          ),
         ),
       ),
     ),
