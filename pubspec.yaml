@@ -17,6 +17,8 @@ dependencies:
     path: packages/flaszki_logic
   material_ui: ^1.11.1
   shared_preferences: ^2.5.6
+  url_launcher: ^6.3.3
+  package_info_plus: ^10.2.2
 
 dev_dependencies:
   flutter_test:
@@ -25,3 +27,5 @@ dev_dependencies:
 
 flutter:
   uses-material-design: true
+  assets:
+    - CREDITS.md
