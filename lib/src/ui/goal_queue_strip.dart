@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../play/goal_queue_view.dart';
+import 'color_fill.dart';
 import 'placeholder_style.dart';
 
 /// Height of the Goal Queue strip (PRD §4.1).
@@ -67,11 +68,15 @@ class _Orb extends StatelessWidget {
     return Container(
       width: size,
       height: size,
-      decoration: BoxDecoration(
+      foregroundDecoration: BoxDecoration(
         shape: BoxShape.circle,
-        color: c == null ? null : PlaceholderStyle.color(c),
         border: Border.all(color: PlaceholderStyle.glass, width: 1.5),
       ),
+      child: c == null
+          ? null
+          : ClipOval(
+              child: ColorFill(colorId: c, color: PlaceholderStyle.color(c)),
+            ),
     );
   }
 }

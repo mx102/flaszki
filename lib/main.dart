@@ -1,4 +1,5 @@
 import 'package:flutter/widgets.dart';
+import 'package:package_info_plus/package_info_plus.dart';
 
 import 'app.dart';
 import 'src/save/key_value_store.dart';
@@ -7,5 +8,12 @@ import 'src/save/save_store.dart';
 Future<void> main() async {
   WidgetsFlutterBinding.ensureInitialized();
   final kv = await SharedPrefsStore.open(schemaVersions.keys.toSet());
-  runApp(FlaszkiApp(save: SaveStore(kv)));
+  String? version;
+  try {
+    final info = await PackageInfo.fromPlatform();
+    version = '${info.version}+${info.buildNumber}';
+  } on Object catch (e) {
+    debugPrint('version unavailable: $e');
+  }
+  runApp(FlaszkiApp(save: SaveStore(kv), version: version));
 }

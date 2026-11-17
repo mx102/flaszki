@@ -3,6 +3,7 @@ import 'package:flutter/widgets.dart';
 
 import '../play/board_layout.dart';
 import '../play/goal_queue_view.dart';
+import 'color_fill.dart';
 import 'placeholder_style.dart';
 
 /// Placeholder glass for Flask [index]: outlined box, one block per Layer;
@@ -58,7 +59,8 @@ class FlaskView extends StatelessWidget {
                         key: ValueKey('layer-$index-$j'),
                         width: w,
                         height: l,
-                        child: ColoredBox(
+                        child: ColorFill(
+                          colorId: flask.layers[j],
                           color: PlaceholderStyle.color(flask.layers[j]),
                         ),
                       ),
