@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
+import 'src/audio/game_audio.dart';
 import 'src/play/level_sequencer.dart';
 import 'src/l10n.dart';
 import 'src/save/save_store.dart';
@@ -25,6 +26,7 @@ class FlaszkiApp extends StatefulWidget {
     this.save,
     this.version,
     this.openUrl = launchUrl,
+    this.audioOut,
   });
 
   final LevelSource levelSource;
@@ -41,6 +43,9 @@ class FlaszkiApp extends StatefulWidget {
   /// Opens the Privacy link.
   final UrlOpener openUrl;
 
+  /// Sound output (#29); `null` = silent.
+  final AudioOut? audioOut;
+
   @override
   State<FlaszkiApp> createState() => _FlaszkiAppState();
 }
@@ -54,8 +59,24 @@ class _FlaszkiAppState extends State<FlaszkiApp> {
     widget.save?.settings ?? const Settings(),
   )..addListener(() => widget.save?.saveSettings(_settings.value));
 
+  /// Sound effects, gated by the Sound toggle; muted while backgrounded.
+  late final GameAudio? _audio = widget.audioOut == null
+      ? null
+      : GameAudio(widget.audioOut!, enabled: () => _settings.value.sound);
+  late final AppLifecycleListener _lifecycle = AppLifecycleListener(
+    onHide: () => _audio?.setBackgrounded(true),
+    onShow: () => _audio?.setBackgrounded(false),
+  );
+
+  @override
+  void initState() {
+    super.initState();
+    _lifecycle;
+  }
+
   @override
   void dispose() {
+    _lifecycle.dispose();
     _settings.dispose();
     super.dispose();
   }
@@ -102,6 +123,7 @@ class _FlaszkiAppState extends State<FlaszkiApp> {
                 onPour: widget.save?.changed,
                 onSolved: widget.save?.solved,
                 onOpenSettings: _openSettings,
+                audio: _audio,
               ),
             ),
           ),
