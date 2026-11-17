@@ -1,0 +1,71 @@
+# PR checks (PRD §11, ADR 0007).
+name: CI
+
+on:
+  pull_request:
+  push:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  FLUTTER_VERSION: 3.50.0
+  ALLOWED_LICENSES: MIT,BSD-2-Clause,BSD-3-Clause,Apache-2.0,Zlib,ISC
+
+jobs:
+  checks:
+    name: Format, analyze, test, licenses
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter pub get
+      - name: Format
+        run: dart format --set-exit-if-changed .
+      - name: Analyze
+        run: flutter analyze
+      - name: Logic unit tests
+        working-directory: packages/flaszki_logic
+        run: dart test
+      - name: App tests
+        run: flutter test
+      - name: License check
+        run: |
+          dart pub global activate very_good_cli
+          very_good packages check licenses \
+            --dependency-type direct-main,transitive \
+            --allowed "$ALLOWED_LICENSES"
+
+  build-web:
+    name: Smoke build web (wasm)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter build web --wasm
+
+  build-android:
+    name: Smoke build Android APK
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - run: flutter build apk --debug

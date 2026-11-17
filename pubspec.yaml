@@ -1,0 +1,26 @@
+name: flaszki
+description: "Flaszki: a fluid-sorting puzzle game."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.14.0
+
+workspace:
+  - packages/flaszki_logic
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flame: ^1.38.2
+  flaszki_logic:
+    path: packages/flaszki_logic
+  material_ui: ^1.11.1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+
+flutter:
+  uses-material-design: true
