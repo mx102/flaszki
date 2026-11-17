@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../play/goal_queue_view.dart';
+import '../l10n.dart';
 import 'color_fill.dart';
 import 'placeholder_style.dart';
 
@@ -25,9 +26,9 @@ class GoalQueueStrip extends StatelessWidget {
           Column(
             mainAxisAlignment: MainAxisAlignment.center,
             children: [
-              const Text(
-                'NEXT',
-                style: TextStyle(
+              Text(
+                context.l10n.goalQueueNext,
+                style: const TextStyle(
                   fontSize: 10,
                   letterSpacing: 1.5,
                   color: PlaceholderStyle.text,

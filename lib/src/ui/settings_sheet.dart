@@ -1,6 +1,7 @@
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../l10n.dart';
 import '../save/save_store.dart';
 import 'placeholder_style.dart';
 
@@ -11,7 +12,7 @@ final privacyUri = Uri.parse('https://flaszki.pages.dev/PRIVACY.md');
 typedef UrlOpener = Future<bool> Function(Uri url);
 
 /// Settings sheet (PRD §4.6). Back/Esc close it (modal route). Every toggle
-/// goes straight to [settings] (the app persists it). Strings: #30.
+/// goes straight to [settings] (the app persists it).
 Future<void> showSettingsSheet(
   BuildContext context, {
   required ValueNotifier<Settings> settings,
@@ -47,7 +48,7 @@ class SettingsSheet extends StatelessWidget {
         children: [
           SwitchListTile(
             key: const ValueKey('settings-patterns'),
-            title: const Text('Colorblind patterns'),
+            title: Text(context.l10n.colorblindPatterns),
             value: s.colorblindPatterns,
             onChanged: (v) => settings.value = Settings(
               colorblindPatterns: v,
@@ -58,7 +59,7 @@ class SettingsSheet extends StatelessWidget {
           ),
           SwitchListTile(
             key: const ValueKey('settings-sound'),
-            title: const Text('Sound'),
+            title: Text(context.l10n.sound),
             value: s.sound,
             onChanged: (v) => settings.value = Settings(
               colorblindPatterns: s.colorblindPatterns,
@@ -69,7 +70,7 @@ class SettingsSheet extends StatelessWidget {
           ),
           ListTile(
             key: const ValueKey('settings-credits'),
-            title: const Text('Credits and licenses'),
+            title: Text(context.l10n.creditsAndLicenses),
             trailing: const Icon(Icons.chevron_right),
             onTap: () => Navigator.of(context).push(
               MaterialPageRoute<void>(
@@ -79,14 +80,14 @@ class SettingsSheet extends StatelessWidget {
           ),
           ListTile(
             key: const ValueKey('settings-privacy'),
-            title: const Text('Privacy'),
+            title: Text(context.l10n.privacy),
             trailing: const Icon(Icons.open_in_new),
             onTap: () => openUrl(privacyUri),
           ),
           if (version != null)
             ListTile(
               key: const ValueKey('settings-version'),
-              title: const Text('Version'),
+              title: Text(context.l10n.version),
               trailing: Text(version!),
             ),
         ],
@@ -103,7 +104,7 @@ class CreditsPage extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) => Scaffold(
-    appBar: AppBar(title: const Text('Credits and licenses')),
+    appBar: AppBar(title: Text(context.l10n.creditsAndLicenses)),
     body: FutureBuilder(
       future: rootBundle.loadString('CREDITS.md'),
       builder: (context, snap) => ListView(
@@ -118,7 +119,7 @@ class CreditsPage extends StatelessWidget {
                 applicationName: 'Flaszki',
                 applicationVersion: version,
               ),
-              child: const Text('Open-source licenses'),
+              child: Text(context.l10n.openSourceLicenses),
             ),
           ),
           const SizedBox(height: 16),

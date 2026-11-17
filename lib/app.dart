@@ -4,6 +4,7 @@ import 'package:material_ui/material_ui.dart';
 import 'package:url_launcher/url_launcher.dart';
 
 import 'src/play/level_sequencer.dart';
+import 'src/l10n.dart';
 import 'src/save/save_store.dart';
 import 'src/ui/color_fill.dart';
 import 'src/ui/level_screen.dart';
@@ -70,6 +71,9 @@ class _FlaszkiAppState extends State<FlaszkiApp> {
     title: 'Flaszki',
     navigatorKey: _nav,
     debugShowCheckedModeBanner: false,
+    // System locale, fallback English (first supported) (PRD §4.7).
+    localizationsDelegates: appLocalizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
     theme: ThemeData(brightness: Brightness.dark),
     home: ValueListenableBuilder(
       valueListenable: _settings,

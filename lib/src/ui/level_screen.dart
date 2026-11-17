@@ -4,6 +4,7 @@ import 'package:flaszki_logic/flaszki_logic.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../l10n.dart';
 import '../play/board_layout.dart';
 import '../play/dead_end_checker.dart';
 import '../play/goal_queue_view.dart';
@@ -298,7 +299,7 @@ class _SolvedOverlay extends StatelessWidget {
       color: const Color(0x88000000),
       child: Center(
         child: Text(
-          'Solved',
+          context.l10n.solved,
           style: PlaceholderStyle.serifItalic.copyWith(fontSize: 48),
         ),
       ),

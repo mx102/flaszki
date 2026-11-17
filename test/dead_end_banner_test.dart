@@ -1,3 +1,4 @@
+import 'package:flaszki/src/l10n.dart';
 import 'package:flaszki/src/ui/board_view.dart' show reflowDuration;
 import 'package:flaszki/src/ui/level_screen.dart';
 import 'package:flaszki_logic/flaszki_logic.dart';
@@ -35,6 +36,8 @@ Future<void> _pump(WidgetTester tester) async {
   addTearDown(tester.view.reset);
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: LevelScreen(
         levelSource: _source,
         // Real exact-mode check, synchronously (no isolate in fake time).

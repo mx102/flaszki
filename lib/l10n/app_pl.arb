@@ -1,0 +1,17 @@
+{
+  "@@locale": "pl",
+  "undo": "Cofnij",
+  "restart": "Od nowa",
+  "restartConfirm": "Stuknij ponownie, aby zacząć od nowa",
+  "settings": "Ustawienia",
+  "levelLabel": "Poziom {number}",
+  "solved": "Rozwiązane",
+  "goalQueueNext": "NASTĘPNY",
+  "deadEnd": "Stąd nie da się już ukończyć poziomu",
+  "colorblindPatterns": "Wzory dla daltonistów",
+  "sound": "Dźwięk",
+  "creditsAndLicenses": "Autorzy i licencje",
+  "privacy": "Prywatność",
+  "version": "Wersja",
+  "openSourceLicenses": "Licencje open source"
+}
