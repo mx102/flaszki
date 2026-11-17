@@ -3,3 +3,7 @@
 ///
 /// Must not import Flutter, Flame or `dart:ui`.
 library;
+
+export 'src/board_state.dart';
+export 'src/game.dart';
+export 'src/level.dart' hide listEquals;
