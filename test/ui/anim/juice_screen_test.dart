@@ -1,3 +1,4 @@
+import 'package:flaszki/src/l10n.dart';
 import 'package:flaszki/src/play/level_sequencer.dart';
 import 'package:flaszki/src/ui/anim/juice.dart';
 import 'package:flaszki/src/ui/level_screen.dart';
@@ -46,6 +47,7 @@ void main() {
     cues = [];
     await tester.pumpWidget(
       MaterialApp(
+        localizationsDelegates: appLocalizationsDelegates,
         home: LevelScreen(
           levelSource: _fixed(_level),
           deadEndRunner: (_) async => false,

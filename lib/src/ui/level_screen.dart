@@ -5,6 +5,8 @@ import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../audio/game_audio.dart';
+import '../l10n.dart';
 import '../play/board_layout.dart';
 import '../play/dead_end_checker.dart';
 import '../play/goal_queue_view.dart';
@@ -41,6 +43,7 @@ class LevelScreen extends StatefulWidget {
     this.onSolved,
     this.onOpenSettings,
     this.deadEndRunner,
+    this.audio,
     this.onJuice,
   });
 
@@ -61,6 +64,9 @@ class LevelScreen extends StatefulWidget {
 
   /// Dead End check (#25); default [checkDeadEndOffThread].
   final DeadEndRunner? deadEndRunner;
+
+  /// Sound effects (#29); `null` = silent.
+  final GameAudio? audio;
 
   /// Pour / seal juice moments (pour start / stream / end, seal, orb pop,
   /// reverse reflow) as they play; see [JuiceCueKind].
@@ -150,6 +156,7 @@ class _LevelScreenState extends State<LevelScreen>
     final before = play.state;
     _juice.finishInvolving(i, _now);
     final effect = play.tapFlask(i);
+    widget.audio?.tap(effect);
     _deadEnd.input();
     setState(() {
       if (effect is Rejected) {
@@ -243,7 +250,7 @@ class _LevelScreenState extends State<LevelScreen>
     final before = play.state;
     setState(() {
       _arm.disarm();
-      play.undo();
+      if (play.undo()) widget.audio?.undo();
       _rewound(before);
     });
     _deadEnd.stateChanged(play.game.state);
@@ -402,7 +409,7 @@ class _SolvedOverlay extends StatelessWidget {
       child: Align(
         alignment: const Alignment(0, -0.16),
         child: Text(
-          'Solved',
+          context.l10n.solved,
           style: StyleA.serifItalic.copyWith(
             fontSize: 48,
             color: StyleA.solved,

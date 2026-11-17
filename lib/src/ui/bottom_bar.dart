@@ -1,5 +1,6 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../l10n.dart';
 import 'style/style_a.dart';
 
 /// Height of the bottom bar (PRD §4.1).
@@ -35,21 +36,23 @@ class BottomBar extends StatelessWidget {
         children: [
           _GlassButton(
             key: const ValueKey('undo'),
-            tooltip: 'Undo',
+            tooltip: context.l10n.undo,
             onPressed: canUndo ? onUndo : null,
             icon: Icons.undo,
           ),
           const SizedBox(width: 8),
           _GlassButton(
             key: const ValueKey('restart'),
-            tooltip: restartArmed ? 'Tap again to restart' : 'Restart',
+            tooltip: restartArmed
+                ? context.l10n.restartConfirm
+                : context.l10n.restart,
             onPressed: onRestart,
             icon: Icons.restart_alt,
             armed: restartArmed,
           ),
           Expanded(
             child: Text(
-              'Level $levelNumber',
+              context.l10n.levelLabel(levelNumber),
               textAlign: TextAlign.center,
               style: StyleA.serifItalic.copyWith(fontSize: 22),
             ),
@@ -57,7 +60,7 @@ class BottomBar extends StatelessWidget {
           const SizedBox(width: 48),
           _GlassButton(
             key: const ValueKey('settings'),
-            tooltip: 'Settings',
+            tooltip: context.l10n.settings,
             onPressed: onSettings,
             icon: Icons.settings,
           ),
