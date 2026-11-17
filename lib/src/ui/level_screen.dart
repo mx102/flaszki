@@ -4,6 +4,7 @@ import 'package:flaszki_logic/flaszki_logic.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
+import '../audio/game_audio.dart';
 import '../play/board_layout.dart';
 import '../play/dead_end_checker.dart';
 import '../play/goal_queue_view.dart';
@@ -38,6 +39,7 @@ class LevelScreen extends StatefulWidget {
     this.onSolved,
     this.onOpenSettings,
     this.deadEndRunner,
+    this.audio,
   });
 
   final LevelSource levelSource;
@@ -57,6 +59,9 @@ class LevelScreen extends StatefulWidget {
 
   /// Dead End check (#25); default [checkDeadEndOffThread].
   final DeadEndRunner? deadEndRunner;
+
+  /// Sound effects (#29); `null` = silent.
+  final GameAudio? audio;
 
   @override
   State<LevelScreen> createState() => _LevelScreenState();
@@ -128,6 +133,7 @@ class _LevelScreenState extends State<LevelScreen> {
     final play = _play;
     if (play == null) return;
     final effect = play.tapFlask(i);
+    widget.audio?.tap(effect);
     _deadEnd.input();
     setState(() {
       if (effect is Rejected) {
@@ -159,7 +165,7 @@ class _LevelScreenState extends State<LevelScreen> {
     if (play == null) return;
     setState(() {
       _arm.disarm();
-      play.undo();
+      if (play.undo()) widget.audio?.undo();
     });
     _deadEnd.stateChanged(play.game.state);
     widget.onPour?.call(play.game);
