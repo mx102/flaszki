@@ -99,6 +99,22 @@ void main() {
     expect(s.game, isNull);
   });
 
+  test(
+    'Settings JSON: round-trip, missing fields default, bad type throws',
+    () {
+      const custom = Settings(colorblindPatterns: true, sound: false);
+      expect(Settings.fromJson(custom.toJson()), custom);
+      expect(
+        Settings.fromJson(const {'sound': false}),
+        const Settings(sound: false),
+      );
+      expect(
+        () => Settings.fromJson(const {'haptics': 1}),
+        throwsFormatException,
+      );
+    },
+  );
+
   test('settings round-trip', () {
     const custom = Settings(colorblindPatterns: true, sound: false);
     launch().saveSettings(custom);
