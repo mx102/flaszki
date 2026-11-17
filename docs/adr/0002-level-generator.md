@@ -54,3 +54,7 @@ Low-end phones are estimated 10–20× slower (worst case ~0.4–0.75 s at 12 Co
 - The difficulty curve must give at least 2 empty Flasks at 12 Colors × 1. With 1 empty, only 3 of ~5 950 deals are solvable in queue order.
 - Changing the generator changes Level N; how saved progress handles a version bump is a persistence question.
 - The solver is cheap enough for an on-device Dead End check: ≤ 2 ms max at 12 Colors × 1, ~5 ms p95 / 30 ms max at 12 Colors × 2 (AOT, M4), with no cap hits at 50 000 nodes.
+
+## Amendment (2026-11-17)
+
+The solver also has an **exact** visited key (`VisitedKey.exact`): per-Flask content codes sorted, plus queue position, stored as a `Set<String>`. It has no collisions, so `unsolvable` is a proof; it is used only for the Dead End check (PRD §4.4), where a false "visited" would show a false hint. The generator keeps the hash key (`Set<int>`, no sort, no Strings) above.
