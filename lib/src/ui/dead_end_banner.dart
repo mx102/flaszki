@@ -1,10 +1,10 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n.dart';
-import 'placeholder_style.dart';
+import 'style/style_a.dart';
 
 /// Non-modal Dead End hint (PRD §4.4) with inline Undo and Restart (this
-/// Restart needs no confirm). Look in #26.
+/// Restart needs no confirm).
 class DeadEndBanner extends StatelessWidget {
   const DeadEndBanner({
     super.key,
@@ -18,8 +18,11 @@ class DeadEndBanner extends StatelessWidget {
   @override
   Widget build(BuildContext context) => Material(
     key: const ValueKey('dead-end'),
-    color: PlaceholderStyle.sides.withValues(alpha: 0.92),
-    borderRadius: BorderRadius.circular(12),
+    color: StyleA.skyBottom.withValues(alpha: 0.92),
+    shape: RoundedRectangleBorder(
+      borderRadius: BorderRadius.circular(12),
+      side: BorderSide(color: StyleA.orbOutline.withValues(alpha: 0.35)),
+    ),
     child: Padding(
       padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 4),
       child: Row(
@@ -27,7 +30,7 @@ class DeadEndBanner extends StatelessWidget {
           Expanded(
             child: Text(
               context.l10n.deadEnd,
-              style: PlaceholderStyle.serifItalic.copyWith(fontSize: 16),
+              style: StyleA.serifItalic.copyWith(fontSize: 16),
             ),
           ),
           TextButton(
@@ -35,7 +38,7 @@ class DeadEndBanner extends StatelessWidget {
             onPressed: onUndo,
             child: Text(
               context.l10n.undo,
-              style: const TextStyle(color: PlaceholderStyle.text),
+              style: const TextStyle(color: StyleA.text),
             ),
           ),
           TextButton(
@@ -43,7 +46,7 @@ class DeadEndBanner extends StatelessWidget {
             onPressed: onRestart,
             child: Text(
               context.l10n.restart,
-              style: const TextStyle(color: PlaceholderStyle.armed),
+              style: const TextStyle(color: StyleA.armed),
             ),
           ),
         ],

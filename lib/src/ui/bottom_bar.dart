@@ -1,13 +1,14 @@
 import 'package:material_ui/material_ui.dart';
 
 import '../l10n.dart';
-import 'placeholder_style.dart';
+import 'style/style_a.dart';
 
 /// Height of the bottom bar (PRD §4.1).
 const double bottomBarHeight = 60;
 
-/// Bottom bar: Undo, Restart (armed look while armed), "Level N", gear
-/// (PRD §4.6). Gear calls [onSettings] (Settings sheet = #28).
+/// Bottom bar: Undo, Restart (armed look while armed), serif italic
+/// "Level N", gear (PRD §4.6). Gear calls [onSettings] (Settings sheet =
+/// #28). Buttons are small glass discs (Style A).
 class BottomBar extends StatelessWidget {
   const BottomBar({
     super.key,
@@ -27,55 +28,92 @@ class BottomBar extends StatelessWidget {
   final VoidCallback? onSettings;
 
   @override
-  Widget build(BuildContext context) {
-    final l10n = context.l10n;
-    return SizedBox(
-      height: bottomBarHeight,
+  Widget build(BuildContext context) => SizedBox(
+    height: bottomBarHeight,
+    child: Padding(
+      padding: const EdgeInsets.symmetric(horizontal: 8),
       child: Row(
         children: [
-          IconButton(
+          _GlassButton(
             key: const ValueKey('undo'),
-            tooltip: l10n.undo,
+            tooltip: context.l10n.undo,
             onPressed: canUndo ? onUndo : null,
-            color: PlaceholderStyle.text,
-            disabledColor: PlaceholderStyle.text.withValues(alpha: 0.3),
-            icon: const Icon(Icons.undo),
+            icon: Icons.undo,
           ),
-          AnimatedContainer(
-            duration: const Duration(milliseconds: 120),
-            decoration: BoxDecoration(
-              shape: BoxShape.circle,
-              color: restartArmed
-                  ? PlaceholderStyle.armed.withValues(alpha: 0.3)
-                  : null,
-            ),
-            child: IconButton(
-              key: const ValueKey('restart'),
-              tooltip: restartArmed ? l10n.restartConfirm : l10n.restart,
-              onPressed: onRestart,
-              color: restartArmed
-                  ? PlaceholderStyle.armed
-                  : PlaceholderStyle.text,
-              icon: const Icon(Icons.restart_alt),
-            ),
+          const SizedBox(width: 8),
+          _GlassButton(
+            key: const ValueKey('restart'),
+            tooltip: restartArmed
+                ? context.l10n.restartConfirm
+                : context.l10n.restart,
+            onPressed: onRestart,
+            icon: Icons.restart_alt,
+            armed: restartArmed,
           ),
           Expanded(
             child: Text(
-              l10n.levelLabel(levelNumber),
+              context.l10n.levelLabel(levelNumber),
               textAlign: TextAlign.center,
-              style: PlaceholderStyle.serifItalic.copyWith(fontSize: 20),
+              style: StyleA.serifItalic.copyWith(fontSize: 22),
             ),
           ),
           const SizedBox(width: 48),
-          IconButton(
+          _GlassButton(
             key: const ValueKey('settings'),
-            tooltip: l10n.settings,
+            tooltip: context.l10n.settings,
             onPressed: onSettings,
-            color: PlaceholderStyle.text,
-            disabledColor: PlaceholderStyle.text.withValues(alpha: 0.5),
-            icon: const Icon(Icons.settings),
+            icon: Icons.settings,
           ),
         ],
+      ),
+    ),
+  );
+}
+
+class _GlassButton extends StatelessWidget {
+  const _GlassButton({
+    super.key,
+    required this.tooltip,
+    required this.onPressed,
+    required this.icon,
+    this.armed = false,
+  });
+
+  final String tooltip;
+  final VoidCallback? onPressed;
+  final IconData icon;
+  final bool armed;
+
+  @override
+  Widget build(BuildContext context) {
+    final enabled = onPressed != null;
+    final tint = armed ? StyleA.armed : const Color(0xFFFFFFFF);
+    return AnimatedContainer(
+      duration: const Duration(milliseconds: 120),
+      width: 44,
+      height: 44,
+      decoration: BoxDecoration(
+        shape: BoxShape.circle,
+        gradient: RadialGradient(
+          center: const Alignment(-0.3, -0.4),
+          radius: 0.6,
+          colors: [
+            tint.withValues(alpha: armed ? 0.45 : 0.25),
+            tint.withValues(alpha: armed ? 0.15 : 0.06),
+          ],
+        ),
+        border: Border.all(
+          color: tint.withValues(alpha: enabled ? 0.33 : 0.15),
+        ),
+      ),
+      child: IconButton(
+        tooltip: tooltip,
+        onPressed: onPressed,
+        padding: EdgeInsets.zero,
+        iconSize: 22,
+        color: armed ? StyleA.armed : StyleA.text,
+        disabledColor: StyleA.text.withValues(alpha: 0.3),
+        icon: Icon(icon),
       ),
     );
   }
