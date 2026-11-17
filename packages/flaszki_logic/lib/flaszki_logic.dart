@@ -7,3 +7,5 @@ library;
 export 'src/board_state.dart';
 export 'src/game.dart';
 export 'src/level.dart' hide listEquals;
+export 'src/prng.dart' show Prng, maxPrngBound;
+export 'src/solver.dart';

@@ -33,6 +33,13 @@ jobs:
       - name: Logic unit tests
         working-directory: packages/flaszki_logic
         run: dart test
+      # ADR 0002: PRNG/solver must match on dart2js and wasm (Chrome preinstalled on ubuntu-latest).
+      - name: Logic tests (Chrome, dart2js)
+        working-directory: packages/flaszki_logic
+        run: dart test -p chrome
+      - name: Logic tests (Chrome, dart2wasm)
+        working-directory: packages/flaszki_logic
+        run: dart test -p chrome -c dart2wasm
       - name: App tests
         run: flutter test
       - name: License check
