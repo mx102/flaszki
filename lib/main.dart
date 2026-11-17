@@ -20,6 +20,6 @@ Future<void> main() async {
     debugPrint('version unavailable: $e');
   }
   final audio = SoloudAudioOut();
-  if (!kIsWeb) unawaited(audio.start()); // web: on first tap (unlock)
+  if (!kIsWeb) unawaited(audio.start()); // web: first pointer down (unlock)
   runApp(FlaszkiApp(save: SaveStore(kv), version: version, audioOut: audio));
 }

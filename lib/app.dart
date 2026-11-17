@@ -89,7 +89,14 @@ class _FlaszkiAppState extends State<FlaszkiApp> {
   );
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(BuildContext context) => Listener(
+    // Any pointer down is the web audio unlock gesture (#29).
+    onPointerDown: (_) => widget.audioOut?.unlock(),
+    behavior: HitTestBehavior.translucent,
+    child: _app(),
+  );
+
+  Widget _app() => MaterialApp(
     title: 'Flaszki',
     navigatorKey: _nav,
     debugShowCheckedModeBanner: false,
@@ -120,7 +127,7 @@ class _FlaszkiAppState extends State<FlaszkiApp> {
                     widget.save?.initial.levelNumber ?? widget.startLevel,
                 initialGame: widget.save?.initial.game,
                 onLevelStarted: widget.save?.levelStarted,
-                onPour: widget.save?.changed,
+                onGameChanged: widget.save?.gameChanged,
                 onSolved: widget.save?.solved,
                 onOpenSettings: _openSettings,
                 audio: _audio,

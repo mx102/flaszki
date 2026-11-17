@@ -115,13 +115,26 @@ class _Solver {
   final _exact = <String>{};
   final _codes = <int>[];
 
-  bool _completed(int i) {
-    if (heights[i] != _cap) return false;
+  bool _completed(int i) => heights[i] == _cap && _uniform(i);
+
+  /// All Layers of Flask [i] one Color (true when empty).
+  bool _uniform(int i) {
     final b = i * _cap;
-    for (var j = 1; j < _cap; j++) {
+    for (var j = 1; j < heights[i]; j++) {
       if (cells[b + j] != cells[b]) return false;
     }
     return true;
+  }
+
+  /// Layers in the top same-Color run of non-empty Flask [s].
+  int _topRun(int s) {
+    final hs = heights[s];
+    final col = cells[s * _cap + hs - 1];
+    var run = 1;
+    while (run < hs && cells[s * _cap + hs - 1 - run] == col) {
+      run++;
+    }
+    return run;
   }
 
   /// Seals head-Color Completed Flasks (cascade); returns sealed indices.
@@ -183,10 +196,7 @@ class _Solver {
       final hs = heights[s];
       if (hs <= 0 || _completed(s)) continue; // prune: out of Completed Flask
       final col = cells[s * _cap + hs - 1];
-      var run = 1;
-      while (run < hs && cells[s * _cap + hs - 1 - run] == col) {
-        run++;
-      }
+      final run = _topRun(s);
       final uniform = run == hs;
       var triedEmpty = false;
       for (var d = 0; d < n; d++) {
@@ -211,22 +221,11 @@ class _Solver {
     return moves;
   }
 
-  bool _uniform(int i) {
-    final b = i * _cap;
-    for (var j = 1; j < heights[i]; j++) {
-      if (cells[b + j] != cells[b]) return false;
-    }
-    return true;
-  }
-
   void _apply(_Frame f, int move) {
     final s = (move >> 8) & 0xFF, d = move & 0xFF;
     final hs = heights[s], hd = heights[d];
     final col = cells[s * _cap + hs - 1];
-    var run = 1;
-    while (run < hs && cells[s * _cap + hs - 1 - run] == col) {
-      run++;
-    }
+    final run = _topRun(s);
     final amount = run < _cap - hd ? run : _cap - hd;
     for (var k = 0; k < amount; k++) {
       cells[d * _cap + hd + k] = col;

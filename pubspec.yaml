@@ -5,6 +5,8 @@ version: 0.1.0+1
 
 environment:
   sdk: ^3.14.0
+  # Exact pin: CI reads it (flutter-action `flutter-version-file`).
+  flutter: 3.50.0
 
 workspace:
   - packages/flaszki_logic
@@ -12,7 +14,6 @@ workspace:
 dependencies:
   flutter:
     sdk: flutter
-  flame: ^1.38.2
   flaszki_logic:
     path: packages/flaszki_logic
   material_ui: ^1.11.1

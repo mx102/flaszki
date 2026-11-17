@@ -29,7 +29,7 @@ const double boardPadding = 8;
 /// The Level screen (PRD §4): Goal Queue strip, board, bottom bar, Solved
 /// overlay. Opens straight into Level [startLevel].
 ///
-/// Seams: [onLevelStarted]/[onPour]/[onSolved] for save (#24), audio and
+/// Seams: [onLevelStarted]/[onGameChanged]/[onSolved] for save (#24), audio and
 /// Dead End (#25); [onOpenSettings] for the Settings sheet (#28);
 /// [onJuice] for per-event animation cues (audio #29).
 class LevelScreen extends StatefulWidget {
@@ -39,7 +39,7 @@ class LevelScreen extends StatefulWidget {
     this.startLevel = 1,
     this.initialGame,
     this.onLevelStarted,
-    this.onPour,
+    this.onGameChanged,
     this.onSolved,
     this.onOpenSettings,
     this.deadEndRunner,
@@ -58,7 +58,7 @@ class LevelScreen extends StatefulWidget {
 
   /// Called after every tap effect that changed the Game (Pour, Undo,
   /// Restart).
-  final void Function(Game game)? onPour;
+  final void Function(Game game)? onGameChanged;
   final void Function(int levelNumber)? onSolved;
   final VoidCallback? onOpenSettings;
 
@@ -95,7 +95,12 @@ class _LevelScreenState extends State<LevelScreen>
   bool _built = false;
 
   // Juice (#27): a view layer; the Game is already updated on tap.
-  late final Juice _juice = Juice(onCue: (c) => widget.onJuice?.call(c));
+  late final Juice _juice = Juice(
+    onCue: (c) {
+      widget.audio?.cue(c);
+      widget.onJuice?.call(c);
+    },
+  );
   late final Ticker _ticker = createTicker(_tick);
   double _now = 0, _base = 0;
   Duration _reflow = reflowDuration;
@@ -166,7 +171,7 @@ class _LevelScreenState extends State<LevelScreen>
     });
     if (effect is Poured) {
       _deadEnd.stateChanged(play.game.state, afterPour: true);
-      widget.onPour?.call(play.game);
+      widget.onGameChanged?.call(play.game);
       if (play.isSolved) _solved();
     }
   }
@@ -235,6 +240,7 @@ class _LevelScreenState extends State<LevelScreen>
     if (play == null || !play.isSolved || _solvedTimer != null) return;
     if (_juice.isActive) return;
     _solvedTimer = Timer(solvedAutoAdvance, _advance);
+    widget.audio?.solved(); // the overlay shows from this frame
   }
 
   void _advance() {
@@ -244,31 +250,15 @@ class _LevelScreenState extends State<LevelScreen>
     _seq.advance().then(_begin);
   }
 
-  void _undo() {
-    final play = _play;
-    if (play == null) return;
-    final before = play.state;
-    setState(() {
-      _arm.disarm();
-      if (play.undo()) widget.audio?.undo();
-      _rewound(before);
-    });
-    _deadEnd.stateChanged(play.game.state);
-    widget.onPour?.call(play.game);
-  }
+  void _undo() => _rewind((play) {
+    if (play.undo()) widget.audio?.undo();
+  });
 
   void _restart() {
-    final play = _play;
-    if (play == null) return;
+    if (_play == null) return;
     _armTimer?.cancel();
     if (_arm.press(_clock.elapsed)) {
-      final before = play.state;
-      setState(() {
-        play.restart();
-        _rewound(before);
-      });
-      _deadEnd.stateChanged(play.game.state);
-      widget.onPour?.call(play.game);
+      _rewind((play) => play.restart());
     } else {
       setState(() {});
       // Timer disarms too, so fake-time tests and real time agree.
@@ -279,18 +269,22 @@ class _LevelScreenState extends State<LevelScreen>
   }
 
   /// Banner Restart: no confirm (PRD §4.4).
-  void _restartNow() {
+  void _restartNow() => _rewind((play) => play.restart());
+
+  /// Undo / Restart: [change] moves the Game back; disarms Restart, drops
+  /// juice, rechecks Dead End, saves.
+  void _rewind(void Function(PlayController play) change) {
     final play = _play;
     if (play == null) return;
     _armTimer?.cancel();
     final before = play.state;
     setState(() {
       _arm.disarm();
-      play.restart();
+      change(play);
       _rewound(before);
     });
     _deadEnd.stateChanged(play.game.state);
-    widget.onPour?.call(play.game);
+    widget.onGameChanged?.call(play.game);
   }
 
   bool _back() {
@@ -372,7 +366,10 @@ class _LevelScreenState extends State<LevelScreen>
                           ),
                         ],
                       ),
-                      if (_deadEnd.showing && !play.isSolved)
+                      // Shown once the Pour/seal animation ends (§4.4).
+                      if (_deadEnd.showing &&
+                          !play.isSolved &&
+                          !_juice.isActive)
                         Positioned(
                           left: boardPadding,
                           right: boardPadding,

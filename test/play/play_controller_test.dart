@@ -24,9 +24,11 @@ void main() {
     expect(c.selected, isNull);
   });
 
-  test('tap an empty Flask with nothing selected shakes it', () {
+  test('tap an empty Flask with nothing selected does nothing', () {
+    // PRD §4.2 only shakes invalid Pour targets; with no selection there is
+    // no Pour, so no shake / invalid sound.
     final e = c.tapFlask(2);
-    expect(e, isA<Rejected>().having((r) => r.target, 'target', 2));
+    expect(e, isA<Ignored>());
     expect(c.selected, isNull);
   });
 

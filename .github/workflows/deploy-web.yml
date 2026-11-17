@@ -23,7 +23,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: 3.50.0
+          flutter-version-file: pubspec.yaml # environment.flutter pin
           cache: true
       - run: flutter build web --wasm --release
       - name: Serve PRIVACY.md on the site

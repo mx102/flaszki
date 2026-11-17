@@ -15,10 +15,34 @@ class Settings {
     this.haptics = false,
   });
 
+  /// Missing fields take their defaults; a wrong type throws
+  /// [FormatException].
+  factory Settings.fromJson(Map<String, Object?> json) {
+    bool flag(String k, bool fallback) => switch (json[k]) {
+      null => fallback,
+      final bool b => b,
+      final v => throw FormatException('$k: $v'),
+    };
+    const d = Settings();
+    return Settings(
+      colorblindPatterns: flag('colorblindPatterns', d.colorblindPatterns),
+      sound: flag('sound', d.sound),
+      music: flag('music', d.music),
+      haptics: flag('haptics', d.haptics),
+    );
+  }
+
   final bool colorblindPatterns;
   final bool sound;
   final bool music;
   final bool haptics;
+
+  Map<String, Object?> toJson() => {
+    'colorblindPatterns': colorblindPatterns,
+    'sound': sound,
+    'music': music,
+    'haptics': haptics,
+  };
 
   @override
   bool operator ==(Object other) =>
@@ -85,11 +109,11 @@ class SaveStore {
   void levelStarted(int levelNumber, Game game) {
     _levelNumber = levelNumber;
     _write(progressKey, {'levelNumber': levelNumber});
-    changed(game);
+    gameChanged(game);
   }
 
   /// After every Pour, Undo and Restart.
-  void changed(Game game) =>
+  void gameChanged(Game game) =>
       _write(levelKey, {'levelNumber': _levelNumber, ...game.toJson()});
 
   /// On Solved: Level Number++, `level` cleared.
@@ -111,12 +135,7 @@ class SaveStore {
   /// Settings sheet (#28) calls this on every toggle.
   void saveSettings(Settings s) {
     _settings = s;
-    _write(settingsKey, {
-      'colorblindPatterns': s.colorblindPatterns,
-      'sound': s.sound,
-      'music': s.music,
-      'haptics': s.haptics,
-    });
+    _write(settingsKey, s.toJson());
   }
 
   SaveData _load() {
@@ -137,25 +156,7 @@ class SaveStore {
       n++; // killed between the last Pour and the Solved write
       game = null;
     }
-    final settings =
-        _read(settingsKey, (j) {
-          bool flag(String k, bool fallback) => switch (j[k]) {
-            null => fallback,
-            final bool b => b,
-            final v => throw FormatException('$k: $v'),
-          };
-          const d = Settings();
-          return Settings(
-            colorblindPatterns: flag(
-              'colorblindPatterns',
-              d.colorblindPatterns,
-            ),
-            sound: flag('sound', d.sound),
-            music: flag('music', d.music),
-            haptics: flag('haptics', d.haptics),
-          );
-        }) ??
-        const Settings();
+    final settings = _read(settingsKey, Settings.fromJson) ?? const Settings();
     _levelNumber = n;
     return SaveData(levelNumber: n, game: game, settings: settings);
   }

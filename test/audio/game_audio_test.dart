@@ -2,6 +2,7 @@ import 'dart:math' as math;
 
 import 'package:flaszki/src/audio/game_audio.dart';
 import 'package:flaszki/src/play/play_controller.dart';
+import 'package:flaszki/src/ui/anim/juice.dart';
 import 'package:flaszki_logic/flaszki_logic.dart';
 import 'package:flutter_test/flutter_test.dart';
 
@@ -60,8 +61,8 @@ void main() {
     expect('${again.plays}', '${out.plays}');
   });
 
-  test('clink, glug and cork pop each have 2–3 variants, all used', () {
-    for (final sfx in [Sfx.select, Sfx.pour, Sfx.seal]) {
+  test('clink, glug and cork (pop, squeak) have 2–3 variants, all used', () {
+    for (final sfx in [Sfx.select, Sfx.pour, Sfx.seal, Sfx.waitingCork]) {
       expect(sfx.variants, inInclusiveRange(2, 3));
     }
     for (var i = 0; i < 50; i++) {
@@ -92,73 +93,69 @@ void main() {
     expect(out.sfx, [Sfx.select]);
   });
 
-  group('Pour', () {
-    // Goal Queue [0, 1]; Flask 2 fills with 1 while 0 is at the head.
-    late PlayController play;
-    setUp(
-      () => play = PlayController(
+  group('Pour (driven by juice cues, so sound follows the animation)', () {
+    JuiceCue glug(int fill) => JuiceCue(JuiceCueKind.glug, 2, 0, fill: fill);
+
+    test('a Poured tap itself is silent', () {
+      final p = PlayController(
         Game(
           Level(
             flasks: [
-              Flask([0, 0, 0]),
               Flask([0]),
-              Flask([1, 1, 1]),
-              Flask([1]),
               Flask([]),
             ],
-            goalQueue: [0, 1],
+            goalQueue: [0],
           ),
         ),
-      ),
-    );
-    TapEffect pour(int from, int to) {
-      play.tapFlask(from);
-      return play.tapFlask(to);
-    }
+      );
+      p.tapFlask(0);
+      audio.tap(p.tapFlask(1));
+      expect(out.plays, isEmpty);
+    });
 
-    test('one glug per Layer moved, pitch rising as the target fills', () {
+    test('each glug cue plays a glug at once, pitch rising with fill', () {
       final quiet = GameAudio(out, enabled: () => true, jitter: 0);
-      quiet.tap(pour(0, 4));
+      for (final f in [1, 2, 3]) {
+        quiet.cue(glug(f));
+      }
       expect(out.sfx, [Sfx.pour, Sfx.pour, Sfx.pour]);
       final speeds = [for (final p in out.plays) p.speed];
       expect(speeds[0], lessThan(speeds[1]));
       expect(speeds[1], lessThan(speeds[2]));
-      final delays = [for (final p in out.plays) p.delay];
-      expect(delays[0], Duration.zero);
-      expect(delays[1], greaterThan(delays[0]));
-      expect(delays[2], greaterThan(delays[1]));
     });
 
-    test('target filling an empty Flask starts lower than a fuller one', () {
-      final quiet = GameAudio(out, enabled: () => true, jitter: 0);
-      quiet.tap(pour(1, 4)); // into empty → fill 1
-      final low = out.plays.single.speed;
-      out.plays.clear();
-      quiet.tap(pour(3, 2)); // 3 → 4 Layers
-      expect(out.plays.first.speed, greaterThan(low));
+    test('waiting cue squeaks the cork; seal pops it; orb pop chimes', () {
+      audio.cue(const JuiceCue(JuiceCueKind.waiting, 2, 0));
+      audio.cue(const JuiceCue(JuiceCueKind.seal, 2, 0));
+      audio.cue(const JuiceCue(JuiceCueKind.orbPop, 2, 0));
+      expect(out.sfx, [Sfx.waitingCork, Sfx.seal, Sfx.queueAdvance]);
     });
 
-    test('Completed Flask left waiting squeaks its cork', () {
-      audio.tap(pour(3, 2));
-      expect(out.sfx, [Sfx.pour, Sfx.waitingCork]);
-    });
-
-    test('Seal pops a cork and advances the queue; last Seal → Solved', () {
-      audio.tap(pour(3, 2));
-      out.plays.clear();
-      audio.tap(pour(1, 0)); // seals 0, then waiting 2 in cascade
-      expect(out.sfx, [
-        Sfx.pour,
-        Sfx.seal,
-        Sfx.queueAdvance,
-        Sfx.seal,
-        Sfx.queueAdvance,
-        Sfx.solved,
-      ]);
-      final delays = [for (final p in out.plays) p.delay];
-      for (var i = 1; i < delays.length; i++) {
-        expect(delays[i], greaterThan(delays[i - 1]), reason: '$i');
+    test('other cues are silent', () {
+      for (final k in [
+        JuiceCueKind.pourStart,
+        JuiceCueKind.streamStart,
+        JuiceCueKind.pourEnd,
+        JuiceCueKind.reverseReflow,
+      ]) {
+        audio.cue(JuiceCue(k, 0, 0));
       }
+      expect(out.plays, isEmpty);
+    });
+
+    test('Solved overlay shown plays the Solved chime', () {
+      audio.solved();
+      expect(out.sfx, [Sfx.solved]);
+    });
+
+    test('cues respect the Sound toggle and backgrounding', () {
+      enabled = false;
+      audio.cue(glug(1));
+      enabled = true;
+      audio.setBackgrounded(true);
+      audio.cue(glug(1));
+      audio.solved();
+      expect(out.plays, isEmpty);
     });
   });
 }

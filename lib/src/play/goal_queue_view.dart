@@ -1,13 +1,17 @@
 import 'package:flaszki_logic/flaszki_logic.dart';
 
+/// Goal Queue entries shown as orbs: the NEXT orb plus 3 small ones
+/// (PRD §4.3). Badges `#2`..`#visibleQueueEntries` match them.
+const int visibleQueueEntries = 4;
+
 /// Goal Queue strip content (PRD §4.3): NEXT orb, next 3 small orbs, `+N`.
 class GoalQueueView {
   const GoalQueueView(this.head, this.next, this.more);
 
   factory GoalQueueView.of(List<int> queue) => GoalQueueView(
     queue.isEmpty ? null : queue.first,
-    queue.skip(1).take(3).toList(growable: false),
-    queue.length > 4 ? queue.length - 4 : 0,
+    queue.skip(1).take(visibleQueueEntries - 1).toList(growable: false),
+    queue.length > visibleQueueEntries ? queue.length - visibleQueueEntries : 0,
   );
 
   final int? head;
@@ -35,4 +39,5 @@ Map<int, int> waitingPositions(BoardState s) {
 }
 
 /// Badge text for a waiting Flask's queue position: `#2`..`#4`, else `…`.
-String badgeLabel(int position) => position <= 4 ? '#$position' : '…';
+String badgeLabel(int position) =>
+    position <= visibleQueueEntries ? '#$position' : '…';

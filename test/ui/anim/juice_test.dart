@@ -104,9 +104,9 @@ void main() {
       juice.advance(0.1);
       expect(kinds(), ['pourStart:0']);
       juice.advance(0.3);
-      expect(kinds(), ['pourStart:0', 'streamStart:0']);
+      expect(kinds(), ['pourStart:0', 'streamStart:0', 'glug:1']);
       juice.advance(0.6);
-      expect(kinds(), ['pourStart:0', 'streamStart:0', 'pourEnd:1']);
+      expect(kinds(), ['pourStart:0', 'streamStart:0', 'glug:1', 'pourEnd:1']);
       expect(juice.isActive, isTrue, reason: 'still returning');
       juice.advance(0.75);
       expect(juice.isActive, isFalse);
@@ -127,6 +127,71 @@ void main() {
       expect(kinds(), ['pourStart:0', 'pourEnd:1', 'pourStart:1']);
       expect(juice.pourOf(0), isNull);
       expect(juice.pourOf(1)!.from, 1);
+    });
+
+    test('one glug per Layer, spread over the stream, target fill rising', () {
+      pour(0, 1, 0, layers: 3);
+      final tm = PourTiming(3);
+      juice.advance(tm.move);
+      final glugs = cues.where((c) => c.kind == JuiceCueKind.glug);
+      expect([for (final g in glugs) g.fill], [1]);
+      juice.advance(tm.move + tm.pour / 3 - 0.01);
+      expect(glugs.length, 1);
+      juice.advance(tm.move + tm.pour / 3);
+      expect([for (final g in glugs) g.fill], [1, 2]);
+      juice.advance(tm.move + tm.pour * 2 / 3);
+      expect([for (final g in glugs) g.fill], [1, 2, 3]);
+      juice.advance(tm.total);
+      expect(glugs.length, 3);
+    });
+
+    test('a Pour cut short plays no more glugs', () {
+      pour(0, 1, 0, layers: 3);
+      final tm = PourTiming(3);
+      juice.advance(tm.move + 0.01);
+      juice.finishInvolving(1, tm.move + 0.02);
+      juice.advance(5);
+      expect(kinds(), ['pourStart:0', 'streamStart:0', 'glug:1', 'pourEnd:1']);
+    });
+
+    test('target left Completed but waiting cues its cork when it lands', () {
+      juice.pour(
+        from: 0,
+        to: 1,
+        color: 3,
+        layers: 1,
+        sourceBefore: const [3],
+        targetBefore: const [3, 3, 3],
+        now: 0,
+      );
+      juice.advance(PourTiming(1).landsAt - 0.01);
+      expect(kinds(), isNot(contains('waiting:1')));
+      juice.advance(PourTiming(1).landsAt);
+      expect(kinds().sublist(kinds().length - 2), ['pourEnd:1', 'waiting:1']);
+    });
+
+    test('a sealed or still-mixed target cues no waiting cork', () {
+      juice.pour(
+        from: 0,
+        to: 1,
+        color: 3,
+        layers: 1,
+        sourceBefore: const [3],
+        targetBefore: const [3, 3, 3],
+        sealed: const {1: 3},
+        now: 0,
+      );
+      juice.pour(
+        from: 2,
+        to: 4,
+        color: 3,
+        layers: 1,
+        sourceBefore: const [3],
+        targetBefore: const [5, 3, 3],
+        now: 0,
+      );
+      juice.advance(5);
+      expect(kinds().where((k) => k.startsWith('waiting')), isEmpty);
     });
 
     test('finishInvolving cuts a Pour short; end cue fires once', () {

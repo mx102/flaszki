@@ -74,6 +74,11 @@ void main() {
     await tester.pump();
     expect(_banner, findsNothing);
     await tester.pump(reflowDuration);
+    expect(_banner, findsNothing, reason: 'Pour still animating');
+    await tester.pump(const Duration(milliseconds: 400)); // 0.65 s of 0.75
+    expect(_banner, findsNothing, reason: 'source still returning');
+    await tester.pump(const Duration(milliseconds: 150));
+    await tester.pump();
     expect(_banner, findsOneWidget);
   });
 

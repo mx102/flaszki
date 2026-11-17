@@ -67,4 +67,27 @@ void main() {
     tester.binding.handleAppLifecycleStateChanged(AppLifecycleState.resumed);
     expect(out.muted, isFalse);
   });
+
+  testWidgets('pointer down unlocks audio before any sound is asked for', (
+    tester,
+  ) async {
+    await launch(tester);
+    expect(out.unlocks, 0);
+    final g = await tester.startGesture(
+      tester.getCenter(find.byKey(ValueKey('flask-${_nonEmpty()}'))),
+    );
+    await tester.pump();
+    expect(out.unlocks, 1);
+    expect(out.plays, isEmpty);
+    await g.up();
+    await tester.pumpAndSettle();
+    expect(out.sfx, [Sfx.select]);
+  });
+
+  testWidgets('a tap off the board unlocks too', (tester) async {
+    await launch(tester);
+    await tester.tapAt(const Offset(2, 2));
+    await tester.pumpAndSettle();
+    expect(out.unlocks, 1);
+  });
 }

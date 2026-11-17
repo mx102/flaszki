@@ -7,9 +7,6 @@ on:
     - cron: "41 4 * * 1"
   workflow_dispatch:
 
-env:
-  FLUTTER_VERSION: 3.50.0
-
 jobs:
   build:
     name: Build ${{ matrix.target }}
@@ -51,7 +48,7 @@ jobs:
       - uses: subosito/flutter-action@v2
         with:
           channel: stable
-          flutter-version: ${{ env.FLUTTER_VERSION }}
+          flutter-version-file: pubspec.yaml # environment.flutter pin
           cache: true
       - run: flutter pub get
       - name: Build
