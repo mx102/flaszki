@@ -378,8 +378,10 @@ class _LevelScreenState extends State<LevelScreen>
                           ),
                         ],
                       ),
+                      // Shown once the Pour/seal animation ends (§4.4).
                       if (_deadEnd.showing &&
-                          !play.isSolved)
+                          !play.isSolved &&
+                          !_juice.isActive)
                         Positioned(
                           left: boardPadding,
                           right: boardPadding,
