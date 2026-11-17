@@ -1,0 +1,122 @@
+# Release (PRD §11, ADR 0007; setup in docs/release.md).
+# Push a vX.Y.Z tag matching pubspec.yaml → AOT golden check → signed AAB/APK
+# (build number = run number) in the `release` environment (manual approval)
+# → Play internal track + GitHub Release with the APK.
+# Manual dispatch with dry_run=true builds and verifies the signed AAB/APK
+# and keeps them as workflow artifacts only (no Play upload, no Release).
+name: Release
+
+on:
+  push:
+    tags: ["v*.*.*"]
+  workflow_dispatch:
+    inputs:
+      tag:
+        description: "Version tag to check against pubspec.yaml, e.g. v0.1.0"
+        required: true
+      dry_run:
+        description: "Build and verify only; skip Play upload and GitHub Release"
+        type: boolean
+        default: true
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+env:
+  FLUTTER_VERSION: 3.50.0
+  TAG: ${{ inputs.tag || github.ref_name }}
+  DRY_RUN: ${{ github.event_name == 'workflow_dispatch' && inputs.dry_run }}
+
+jobs:
+  version:
+    name: Check tag matches pubspec
+    runs-on: ubuntu-latest
+    outputs:
+      build-name: ${{ steps.check.outputs.build-name }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - id: check
+        run: echo "build-name=$(dart run tool/release_version.dart "$TAG")" >> "$GITHUB_OUTPUT"
+
+  golden-aot:
+    needs: version
+    uses: ./.github/workflows/golden-aot.yml
+
+  android:
+    name: Signed Android build and upload
+    needs: [version, golden-aot]
+    runs-on: ubuntu-latest
+    environment: release
+    permissions:
+      contents: write
+    env:
+      BUILD_NAME: ${{ needs.version.outputs.build-name }}
+      BUILD_NUMBER: ${{ github.run_number }}
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version: ${{ env.FLUTTER_VERSION }}
+          cache: true
+      - name: Decode upload keystore
+        env:
+          ANDROID_KEYSTORE_BASE64: ${{ secrets.ANDROID_KEYSTORE_BASE64 }}
+        run: |
+          if [ -z "$ANDROID_KEYSTORE_BASE64" ]; then
+            echo "::error::ANDROID_KEYSTORE_BASE64 secret missing (see docs/release.md)"
+            exit 1
+          fi
+          echo "$ANDROID_KEYSTORE_BASE64" | base64 -d > "$RUNNER_TEMP/upload.jks"
+          echo "ANDROID_KEYSTORE_PATH=$RUNNER_TEMP/upload.jks" >> "$GITHUB_ENV"
+      - name: Build AAB and APK
+        env:
+          ANDROID_KEYSTORE_PASSWORD: ${{ secrets.ANDROID_KEYSTORE_PASSWORD }}
+          ANDROID_KEY_ALIAS: ${{ secrets.ANDROID_KEY_ALIAS }}
+          ANDROID_KEY_PASSWORD: ${{ secrets.ANDROID_KEY_PASSWORD }}
+        run: |
+          flutter build appbundle --release --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
+          flutter build apk --release --build-name="$BUILD_NAME" --build-number="$BUILD_NUMBER"
+          mkdir -p dist
+          cp build/app/outputs/bundle/release/app-release.aab "dist/flaszki-$BUILD_NAME.aab"
+          cp build/app/outputs/flutter-apk/app-release.apk "dist/flaszki-$BUILD_NAME.apk"
+      - name: Verify release signature (not debug key)
+        run: |
+          apksigner="$(find "$ANDROID_HOME/build-tools" -mindepth 1 -maxdepth 1 | sort -V | tail -1)/apksigner"
+          "$apksigner" verify --print-certs "dist/flaszki-$BUILD_NAME.apk" | tee apk-certs.txt
+          jarsigner -verify -verbose -certs "dist/flaszki-$BUILD_NAME.aab" > aab-certs.txt
+          grep -q "jar verified" aab-certs.txt
+          if grep -q "CN=Android Debug" apk-certs.txt aab-certs.txt; then
+            echo "::error::Release build is signed with the debug key"
+            exit 1
+          fi
+          rm -f "$ANDROID_KEYSTORE_PATH"
+      - uses: actions/upload-artifact@v4
+        with:
+          name: android-${{ env.BUILD_NAME }}+${{ env.BUILD_NUMBER }}
+          path: dist/
+      - name: Upload to Play internal track
+        if: env.DRY_RUN != 'true'
+        uses: r0adkll/upload-google-play@v1
+        with:
+          serviceAccountJsonPlainText: ${{ secrets.PLAY_SERVICE_ACCOUNT_JSON }}
+          packageName: com.mx102.flaszki
+          releaseFiles: dist/flaszki-${{ env.BUILD_NAME }}.aab
+          track: internal
+          # "draft" until the app's first Play release is published.
+          status: ${{ vars.PLAY_RELEASE_STATUS || 'completed' }}
+      - name: GitHub Release with signed APK
+        if: env.DRY_RUN != 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release create "$TAG" "dist/flaszki-$BUILD_NAME.apk" --title "$TAG" --generate-notes --verify-tag
