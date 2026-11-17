@@ -1,21 +1,22 @@
-import 'package:flame/game.dart';
 import 'package:flaszki/app.dart';
+import 'package:flaszki_logic/flaszki_logic.dart';
+import 'package:flutter/foundation.dart';
 import 'package:flutter/widgets.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 void main() {
-  testWidgets('placeholder app shows the game in a portrait column', (
+  testWidgets('app shows the game in a full-height portrait column', (
     tester,
   ) async {
     tester.view.physicalSize = const Size(1600, 900);
     tester.view.devicePixelRatio = 1;
     addTearDown(tester.view.reset);
 
-    await tester.pumpWidget(const FlaszkiApp());
+    await tester.pumpWidget(
+      FlaszkiApp(levelSource: (n) => SynchronousFuture(generate(n))),
+    );
 
-    final game = find.byType(GameWidget<FlaszkiGame>);
-    expect(game, findsOneWidget);
-    final size = tester.getSize(game);
+    final size = tester.getSize(find.byKey(const ValueKey('column')));
     expect(size.height, 900);
     expect(size.width, lessThan(size.height));
   });
