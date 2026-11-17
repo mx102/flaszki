@@ -1,6 +1,7 @@
 import 'package:flutter/widgets.dart';
 
 import '../play/goal_queue_view.dart';
+import 'color_fill.dart';
 import 'style/orb_painter.dart';
 import 'style/style_a.dart';
 
@@ -62,6 +63,12 @@ class _Orb extends StatelessWidget {
   @override
   Widget build(BuildContext context) => SizedBox.square(
     dimension: size,
-    child: CustomPaint(painter: OrbPainter(color, next: size > 30)),
+    child: CustomPaint(
+      painter: OrbPainter(
+        color,
+        next: size > 30,
+        patterned: ColorblindPatterns.of(context),
+      ),
+    ),
   );
 }

@@ -52,6 +52,12 @@ void main() {
       'flask empty': const FlaskPainter([]),
       'flask full': FlaskPainter(fluidBands([0, 11, 11, 8])),
       'flask fractional': const FlaskPainter([FluidBand(2, 2.5)]),
+      'flask patterned': FlaskPainter(
+        fluidBands([1, 2, 3, 11]),
+        patterned: true,
+        tilt: 0.8,
+      ),
+      'orb patterned': const OrbPainter(7, patterned: true),
       'cork': const CorkPainter(),
       'orb': const OrbPainter(5, next: true),
       'orb empty': const OrbPainter(null),

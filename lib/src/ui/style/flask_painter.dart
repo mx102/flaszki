@@ -4,6 +4,8 @@ import 'package:flaszki_logic/flaszki_logic.dart' show flaskCapacity;
 import 'package:flutter/widgets.dart';
 
 import '../../play/board_layout.dart' show neckRatio;
+import '../color_fill.dart';
+import '../color_pattern.dart';
 import 'style_a.dart';
 
 /// One fluid band: [layers] (may be fractional, for pour animation #27)
@@ -80,12 +82,13 @@ class FlaskGeometry {
 /// a horizontal gradient (darker edges) and a meniscus on the top band,
 /// outline, two specular streaks. Pure function of its inputs, so #27 can
 /// feed fractional [bands] during a Pour and #28 can add patterns.
-class FlaskPainter extends CustomPainter {
+class FlaskPainter extends CustomPainter implements PatternedPainter {
   const FlaskPainter(
     this.bands, {
     this.tilt = 0,
     this.tubeAspect = 3,
     this.outlineWidth,
+    this.patterned = false,
   });
 
   final List<FluidBand> bands;
@@ -99,6 +102,10 @@ class FlaskPainter extends CustomPainter {
 
   /// Outline stroke; default scales with the tube, 1–2.5 px.
   final double? outlineWidth;
+
+  /// Colorblind patterns over each band (PRD §5.1, Settings #28).
+  @override
+  final bool patterned;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -144,6 +151,15 @@ class FlaskPainter extends CustomPainter {
             stops: const [0, 0.45, 1],
           ).createShader(Rect.fromLTRB(-w / 2, top, w / 2, y)),
       );
+      if (patterned) {
+        paintPattern(
+          canvas,
+          Rect.fromLTRB(-w / 2, top, w / 2, y + 1),
+          b.color,
+          col,
+          tile: (g.layer * 0.3).clamp(5.0, 10.0),
+        );
+      }
       if (i == shown.length - 1) {
         canvas.drawOval(
           Rect.fromCenter(
@@ -188,6 +204,7 @@ class FlaskPainter extends CustomPainter {
       old.tilt != tilt ||
       old.tubeAspect != tubeAspect ||
       old.outlineWidth != outlineWidth ||
+      old.patterned != patterned ||
       !_sameBands(old.bands, bands);
 
   static bool _sameBands(List<FluidBand> a, List<FluidBand> b) {

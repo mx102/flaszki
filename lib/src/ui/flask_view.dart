@@ -5,6 +5,7 @@ import 'package:flutter/widgets.dart';
 
 import '../play/board_layout.dart';
 import '../play/goal_queue_view.dart';
+import 'color_fill.dart';
 import 'style/flask_painter.dart';
 import 'style/style_a.dart';
 
@@ -43,7 +44,12 @@ class FlaskView extends StatelessWidget {
         clipBehavior: Clip.none,
         children: [
           Positioned.fill(
-            child: CustomPaint(painter: FlaskPainter(fluidBands(flask.layers))),
+            child: CustomPaint(
+              painter: FlaskPainter(
+                fluidBands(flask.layers),
+                patterned: ColorblindPatterns.of(context),
+              ),
+            ),
           ),
           for (var j = 0; j < flask.layers.length; j++)
             Positioned(

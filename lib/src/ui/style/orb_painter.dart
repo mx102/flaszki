@@ -2,17 +2,23 @@ import 'dart:math' as math;
 
 import 'package:flutter/widgets.dart';
 
+import '../color_fill.dart';
+import '../color_pattern.dart';
 import 'style_a.dart';
 
 /// Goal Queue glass orb (PRD §5): radial gradient lit from the top-left,
 /// pale outline, glossy highlight. [color] null = empty glass orb.
-class OrbPainter extends CustomPainter {
-  const OrbPainter(this.color, {this.next = false});
+class OrbPainter extends CustomPainter implements PatternedPainter {
+  const OrbPainter(this.color, {this.next = false, this.patterned = false});
 
   final int? color;
 
   /// The big NEXT orb gets a thicker rim.
   final bool next;
+
+  /// Colorblind pattern over the fill (PRD §5.1, Settings #28).
+  @override
+  final bool patterned;
 
   @override
   void paint(Canvas canvas, Size size) {
@@ -36,6 +42,12 @@ class OrbPainter extends CustomPainter {
             stops: const [0, 0.5, 1],
           ).createShader(rect),
       );
+      if (patterned) {
+        canvas.save();
+        canvas.clipPath(Path()..addOval(rect));
+        paintPattern(canvas, rect, id, col, tile: (r * 0.4).clamp(4.0, 8.0));
+        canvas.restore();
+      }
     }
     canvas.drawCircle(
       c,
@@ -56,5 +68,6 @@ class OrbPainter extends CustomPainter {
   }
 
   @override
-  bool shouldRepaint(OrbPainter old) => old.color != color || old.next != next;
+  bool shouldRepaint(OrbPainter old) =>
+      old.color != color || old.next != next || old.patterned != patterned;
 }
