@@ -89,9 +89,14 @@ class FlaskPainter extends CustomPainter implements PatternedPainter {
     this.tubeAspect = 3,
     this.outlineWidth,
     this.patterned = false,
+    this.wobble = 0,
+    this.wobblePhase = 0,
   });
 
   final List<FluidBand> bands;
+
+  /// Top-surface wave amplitude (Layers) and phase; pour landing (#27).
+  final double wobble, wobblePhase;
 
   /// Rotation (radians, clockwise) about the box centre; the fluid surface
   /// stays level (PRD §5). Used by the icon now and by pour juice (#27).
@@ -138,9 +143,23 @@ class FlaskPainter extends CustomPainter implements PatternedPainter {
     for (final (i, b) in shown.indexed) {
       final top = surface - thick * b.layers;
       final col = StyleA.color(b.color);
-      final rect = Rect.fromLTRB(-h, top, h, y + 1);
-      canvas.drawRect(
-        rect,
+      final last = i == shown.length - 1;
+      final amp = last ? wobble * g.layer : 0.0;
+      final body = Path()
+        ..moveTo(-h, y + 1)
+        ..lineTo(-h, top);
+      if (amp > 0.1) {
+        final k = 2 * math.pi * 0.8 / w;
+        for (var x = -w; x <= w; x += 2) {
+          body.lineTo(x, top + math.sin(x * k + wobblePhase) * amp);
+        }
+      }
+      body
+        ..lineTo(h, top)
+        ..lineTo(h, y + 1)
+        ..close();
+      canvas.drawPath(
+        body,
         Paint()
           ..shader = LinearGradient(
             colors: [
@@ -160,7 +179,7 @@ class FlaskPainter extends CustomPainter implements PatternedPainter {
           tile: (g.layer * 0.3).clamp(5.0, 10.0),
         );
       }
-      if (i == shown.length - 1) {
+      if (last && amp <= 0.1) {
         canvas.drawOval(
           Rect.fromCenter(
             center: Offset(0, top),
@@ -205,6 +224,8 @@ class FlaskPainter extends CustomPainter implements PatternedPainter {
       old.tubeAspect != tubeAspect ||
       old.outlineWidth != outlineWidth ||
       old.patterned != patterned ||
+      old.wobble != wobble ||
+      old.wobblePhase != wobblePhase ||
       !_sameBands(old.bands, bands);
 
   static bool _sameBands(List<FluidBand> a, List<FluidBand> b) {

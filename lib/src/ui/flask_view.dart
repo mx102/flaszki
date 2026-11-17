@@ -20,6 +20,11 @@ class FlaskView extends StatelessWidget {
     required this.flask,
     required this.metrics,
     this.waitingPosition,
+    this.bands,
+    this.tilt = 0,
+    this.wobble = 0,
+    this.wobblePhase = 0,
+    this.corkDrop,
   });
 
   final int index;
@@ -29,12 +34,22 @@ class FlaskView extends StatelessWidget {
   /// Goal Queue position (1-based) if this is a waiting Completed Flask.
   final int? waitingPosition;
 
+  /// Pour juice (#27): fractional bands override [flask]'s Layers; tilt
+  /// (radians) and target surface wobble go to [FlaskPainter].
+  final List<FluidBand>? bands;
+  final double tilt, wobble, wobblePhase;
+
+  /// Sealing: cork drop 0..1 (no badge).
+  final double? corkDrop;
+
   @override
   Widget build(BuildContext context) {
     final size = Size(metrics.glassWidth, metrics.glassHeight);
     final g = FlaskGeometry(size);
     final tw = g.tubeWidth;
     final pos = waitingPosition;
+    final drop = corkDrop;
+    final cork = drop ?? (pos != null ? 1.0 : null);
     final badgeR = (g.layer * 0.45).clamp(8.0, 11.0);
     return SizedBox(
       key: ValueKey('glass-$index'),
@@ -46,7 +61,10 @@ class FlaskView extends StatelessWidget {
           Positioned.fill(
             child: CustomPaint(
               painter: FlaskPainter(
-                fluidBands(flask.layers),
+                bands ?? fluidBands(flask.layers),
+                tilt: tilt,
+                wobble: wobble,
+                wobblePhase: wobblePhase,
                 patterned: ColorblindPatterns.of(context),
               ),
             ),
@@ -60,18 +78,19 @@ class FlaskView extends StatelessWidget {
               height: g.layer,
               child: const SizedBox.shrink(),
             ),
-          if (pos != null) ...[
+          if (cork != null)
             Positioned(
               key: ValueKey('cork-$index'),
               left: g.centerX - tw * 0.36,
               width: tw * 0.72,
-              top: -tw * 0.2 - g.layer * 0.12,
+              top: -tw * 0.2 - g.layer * 0.12 - (1 - cork) * g.layer * 1.6,
               height: tw * 0.45,
-              child: const Opacity(
-                opacity: 0.9,
-                child: CustomPaint(painter: CorkPainter()),
+              child: Opacity(
+                opacity: 0.9 * cork,
+                child: const CustomPaint(painter: CorkPainter()),
               ),
             ),
+          if (pos != null && drop == null) ...[
             Positioned(
               key: ValueKey('badge-$index'),
               left: g.centerX + tw * 0.55 - badgeR,

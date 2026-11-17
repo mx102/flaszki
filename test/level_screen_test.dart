@@ -228,7 +228,8 @@ void main() {
       await _tapFlask(tester, p.from);
       await _tapFlask(tester, p.to);
     }
-    await tester.pump(const Duration(milliseconds: 500));
+    // Solved shows once the last seal has flown (juice #27).
+    await tester.pumpAndSettle();
     expect(find.text('Solved'), findsOneWidget);
     await tester.pump(const Duration(seconds: 2));
     await tester.pumpAndSettle();

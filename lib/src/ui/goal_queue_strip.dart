@@ -11,9 +11,20 @@ const double goalQueueStripHeight = 64;
 /// Goal Queue strip (PRD §4.3, §5): big NEXT glass orb with a small-caps
 /// serif "NEXT" under it, 3 small orbs, `+N`.
 class GoalQueueStrip extends StatelessWidget {
-  const GoalQueueStrip({super.key, required this.queue});
+  const GoalQueueStrip({
+    super.key,
+    required this.queue,
+    this.nextOrbKey,
+    this.pop = 0,
+  });
 
   final GoalQueueView queue;
+
+  /// Locates the NEXT orb (seal fly-in target, #27).
+  final Key? nextOrbKey;
+
+  /// NEXT orb pop 0..1 as a sealed Flask lands in it (#27).
+  final double pop;
 
   @override
   Widget build(BuildContext context) => SizedBox(
@@ -24,7 +35,17 @@ class GoalQueueStrip extends StatelessWidget {
         Column(
           mainAxisAlignment: MainAxisAlignment.center,
           children: [
-            _Orb(key: const ValueKey('orb-next'), color: queue.head, size: 42),
+            SizedBox(
+              key: nextOrbKey,
+              child: Transform.scale(
+                scale: 1 + 0.25 * pop,
+                child: _Orb(
+                  key: const ValueKey('orb-next'),
+                  color: queue.head,
+                  size: 42,
+                ),
+              ),
+            ),
             const SizedBox(height: 1),
             const Text('NEXT', style: StyleA.smallCaps),
           ],

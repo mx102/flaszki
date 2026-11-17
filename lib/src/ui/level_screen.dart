@@ -1,6 +1,7 @@
 import 'dart:async';
 
 import 'package:flaszki_logic/flaszki_logic.dart';
+import 'package:flutter/scheduler.dart';
 import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
@@ -10,6 +11,7 @@ import '../play/goal_queue_view.dart';
 import '../play/level_sequencer.dart';
 import '../play/play_controller.dart';
 import '../play/restart_arm.dart';
+import 'anim/juice.dart';
 import 'board_view.dart';
 import 'bottom_bar.dart';
 import 'dead_end_banner.dart';
@@ -26,7 +28,8 @@ const double boardPadding = 8;
 /// overlay. Opens straight into Level [startLevel].
 ///
 /// Seams: [onLevelStarted]/[onPour]/[onSolved] for save (#24), audio and
-/// Dead End (#25); [onOpenSettings] for the Settings sheet (#28).
+/// Dead End (#25); [onOpenSettings] for the Settings sheet (#28);
+/// [onJuice] for per-event animation cues (audio #29).
 class LevelScreen extends StatefulWidget {
   const LevelScreen({
     super.key,
@@ -38,6 +41,7 @@ class LevelScreen extends StatefulWidget {
     this.onSolved,
     this.onOpenSettings,
     this.deadEndRunner,
+    this.onJuice,
   });
 
   final LevelSource levelSource;
@@ -58,11 +62,16 @@ class LevelScreen extends StatefulWidget {
   /// Dead End check (#25); default [checkDeadEndOffThread].
   final DeadEndRunner? deadEndRunner;
 
+  /// Pour / seal juice moments (pour start / stream / end, seal, orb pop,
+  /// reverse reflow) as they play; see [JuiceCueKind].
+  final void Function(JuiceCue cue)? onJuice;
+
   @override
   State<LevelScreen> createState() => _LevelScreenState();
 }
 
-class _LevelScreenState extends State<LevelScreen> {
+class _LevelScreenState extends State<LevelScreen>
+    with SingleTickerProviderStateMixin {
   late final LevelSequencer _seq = LevelSequencer(
     widget.levelSource,
     startLevel: widget.startLevel,
@@ -78,6 +87,13 @@ class _LevelScreenState extends State<LevelScreen> {
   Timer? _solvedTimer;
   bool _advancing = false;
   bool _built = false;
+
+  // Juice (#27): a view layer; the Game is already updated on tap.
+  late final Juice _juice = Juice(onCue: (c) => widget.onJuice?.call(c));
+  late final Ticker _ticker = createTicker(_tick);
+  double _now = 0, _base = 0;
+  Duration _reflow = reflowDuration;
+  final GlobalKey _orbKey = GlobalKey(), _boardKey = GlobalKey();
   late final DeadEndChecker _deadEnd = DeadEndChecker(
     run: widget.deadEndRunner,
     revealDelay: reflowDuration,
@@ -103,6 +119,7 @@ class _LevelScreenState extends State<LevelScreen> {
     _armTimer?.cancel();
     _solvedTimer?.cancel();
     _deadEnd.dispose();
+    _ticker.dispose();
     super.dispose();
   }
 
@@ -119,6 +136,9 @@ class _LevelScreenState extends State<LevelScreen> {
       _shakes.clear();
       _arm.disarm();
       _advancing = false;
+      _solvedTimer?.cancel();
+      _solvedTimer = null;
+      _juice.clear();
     });
     _deadEnd.stateChanged(_play!.game.state);
     widget.onLevelStarted?.call(_levelNumber, _play!.game);
@@ -127,12 +147,15 @@ class _LevelScreenState extends State<LevelScreen> {
   void _tapFlask(int i) {
     final play = _play;
     if (play == null) return;
+    final before = play.state;
+    _juice.finishInvolving(i, _now);
     final effect = play.tapFlask(i);
     _deadEnd.input();
     setState(() {
       if (effect is Rejected) {
         _shakes[effect.target] = (_shakes[effect.target] ?? 0) + 1;
       }
+      if (effect is Poured) _startPour(before, effect);
     });
     if (effect is Poured) {
       _deadEnd.stateChanged(play.game.state, afterPour: true);
@@ -141,9 +164,69 @@ class _LevelScreenState extends State<LevelScreen> {
     }
   }
 
+  void _startPour(BoardState before, Poured p) {
+    final after = _play!.state;
+    final source = before.flasks[p.from].layers;
+    _reflow = reflowDuration;
+    _juice.pour(
+      from: p.from,
+      to: p.to,
+      color: source.last,
+      layers: p.outcome.layersMoved,
+      sourceBefore: source,
+      targetBefore: before.flasks[p.to].layers,
+      sealed: {for (final s in p.outcome.sealed) s: after.flasks[s].layers[0]},
+      now: _now,
+    );
+    if (!_ticker.isActive) {
+      _base = _now;
+      _ticker.start();
+    }
+  }
+
+  void _tick(Duration elapsed) {
+    _now = _base + elapsed.inMicroseconds / 1e6;
+    _juice.advance(_now);
+    if (!_juice.isActive) _ticker.stop();
+    setState(() {});
+    _armSolved();
+  }
+
+  /// Undo / Restart moved the Game back: drop juice; sealed Flasks back on
+  /// the board reflow in quickly.
+  void _rewound(BoardState before) {
+    final after = _play!.state;
+    final restored = [
+      for (var i = 0; i < after.flasks.length; i++)
+        if (after.isOnBoard(i) && !before.isOnBoard(i)) i,
+    ];
+    _juice.clear(restored: restored);
+    _reflow = restored.isEmpty ? reflowDuration : reverseReflowDuration;
+    if (_ticker.isActive) _ticker.stop();
+  }
+
+  /// NEXT orb centre in board coordinates (seal fly-in target).
+  Offset? _orbInBoard() {
+    final orb = _orbKey.currentContext?.findRenderObject();
+    final board = _boardKey.currentContext?.findRenderObject();
+    if (orb is! RenderBox || board is! RenderBox) return null;
+    if (!orb.hasSize || !board.hasSize) return null;
+    return board.globalToLocal(orb.localToGlobal(orb.size.center(Offset.zero)));
+  }
+
   void _solved() {
     widget.onSolved?.call(_levelNumber);
     _solvedTimer?.cancel();
+    _solvedTimer = null;
+    _armSolved();
+  }
+
+  /// "Solved" shows (and its auto-advance counts) once the last seal has
+  /// flown into the orb, so the overlay never hides the juice.
+  void _armSolved() {
+    final play = _play;
+    if (play == null || !play.isSolved || _solvedTimer != null) return;
+    if (_juice.isActive) return;
     _solvedTimer = Timer(solvedAutoAdvance, _advance);
   }
 
@@ -157,9 +240,11 @@ class _LevelScreenState extends State<LevelScreen> {
   void _undo() {
     final play = _play;
     if (play == null) return;
+    final before = play.state;
     setState(() {
       _arm.disarm();
       play.undo();
+      _rewound(before);
     });
     _deadEnd.stateChanged(play.game.state);
     widget.onPour?.call(play.game);
@@ -170,7 +255,11 @@ class _LevelScreenState extends State<LevelScreen> {
     if (play == null) return;
     _armTimer?.cancel();
     if (_arm.press(_clock.elapsed)) {
-      setState(play.restart);
+      final before = play.state;
+      setState(() {
+        play.restart();
+        _rewound(before);
+      });
       _deadEnd.stateChanged(play.game.state);
       widget.onPour?.call(play.game);
     } else {
@@ -187,9 +276,11 @@ class _LevelScreenState extends State<LevelScreen> {
     final play = _play;
     if (play == null) return;
     _armTimer?.cancel();
+    final before = play.state;
     setState(() {
       _arm.disarm();
       play.restart();
+      _rewound(before);
     });
     _deadEnd.stateChanged(play.game.state);
     widget.onPour?.call(play.game);
@@ -229,14 +320,26 @@ class _LevelScreenState extends State<LevelScreen> {
                       Column(
                         children: [
                           GoalQueueStrip(
-                            queue: GoalQueueView.of(play.state.goalQueue),
+                            // Seals still flying count as not yet taken.
+                            queue: GoalQueueView.of([
+                              for (final s in _juice.seals)
+                                if (_now < s.end) s.color,
+                              ...play.state.goalQueue,
+                            ]),
+                            nextOrbKey: _orbKey,
+                            pop: _juice.orbPop(_now),
                           ),
                           Expanded(
                             child: Padding(
                               padding: const EdgeInsets.all(boardPadding),
                               child: LayoutBuilder(
                                 builder: (context, box) => BoardView(
+                                  key: _boardKey,
                                   state: play.state,
+                                  juice: _juice,
+                                  now: _now,
+                                  reflow: _reflow,
+                                  orbCenter: _orbInBoard,
                                   metrics: fitBoard(
                                     _flaskCount,
                                     box.maxWidth,
@@ -272,7 +375,7 @@ class _LevelScreenState extends State<LevelScreen> {
                             onRestart: _restartNow,
                           ),
                         ),
-                      if (play.isSolved)
+                      if (play.isSolved && !_juice.isActive)
                         Positioned.fill(child: _SolvedOverlay(onTap: _advance)),
                     ],
                   ),
