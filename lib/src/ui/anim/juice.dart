@@ -29,6 +29,10 @@ class PourTiming {
 
   /// Stream ends; the target's surface wobbles from here.
   double get landsAt => move + pour;
+
+  /// When the [k]-th Layer (0-based) starts falling: Layers spread evenly
+  /// over the stream.
+  double glugAt(int k) => move + pour * k / layers;
 }
 
 /// Peak target-surface wobble, in Layers; decays after landing.
@@ -85,10 +89,14 @@ class PourAnim {
     required this.sourceBefore,
     required this.targetBefore,
     required this.start,
+    this.leavesWaiting = false,
   }) : timing = PourTiming(layers);
 
   final int from, to, color, layers;
   final List<int> sourceBefore, targetBefore;
+
+  /// The target ends Completed but not sealed (a waiting Completed Flask).
+  final bool leavesWaiting;
   final double start;
   final PourTiming timing;
 
@@ -230,8 +238,16 @@ enum JuiceCueKind {
   /// Stream begins ([JuiceCue.flask] = source).
   streamStart,
 
+  /// One Layer starts falling into the target ([JuiceCue.flask] = target,
+  /// [JuiceCue.fill] = its Layers once this one lands).
+  glug,
+
   /// Stream lands / Pour cut short ([JuiceCue.flask] = target).
   pourEnd,
+
+  /// Pour landed leaving the target a waiting Completed Flask (hovering
+  /// cork; [JuiceCue.flask] = target).
+  waiting,
 
   /// Cork drops on a sealed Flask.
   seal,
@@ -244,7 +260,7 @@ enum JuiceCueKind {
 }
 
 class JuiceCue {
-  const JuiceCue(this.kind, this.flask, this.color);
+  const JuiceCue(this.kind, this.flask, this.color, {this.fill = 0});
 
   final JuiceCueKind kind;
   final int flask;
@@ -252,8 +268,11 @@ class JuiceCue {
   /// Fluid Color id involved (-1 for [JuiceCueKind.reverseReflow]).
   final int color;
 
+  /// [JuiceCueKind.glug]: target Layers after this one (1..capacity).
+  final int fill;
+
   @override
-  String toString() => 'JuiceCue(${kind.name}, $flask, $color)';
+  String toString() => 'JuiceCue(${kind.name}, $flask, $color, $fill)';
 }
 
 /// All in-flight juice. Never gates input: the Game is already updated;
@@ -268,6 +287,7 @@ class Juice {
   final List<PourAnim> _pours = [];
   final List<SealAnim> _seals = [];
   final Set<PourAnim> _streamCued = {}, _endCued = {};
+  final Map<PourAnim, int> _glugsCued = {};
   final Set<SealAnim> _sealCued = {};
   double? _popAt;
   double _now = 0;
@@ -332,6 +352,10 @@ class Juice {
       sourceBefore: sourceBefore,
       targetBefore: targetBefore,
       start: now,
+      leavesWaiting:
+          !sealed.containsKey(to) &&
+          targetBefore.length + layers == flaskCapacity &&
+          targetBefore.every((c) => c == color),
     );
     _pours.add(p);
     var i = 0;
@@ -358,6 +382,7 @@ class Juice {
     _seals.clear();
     _streamCued.clear();
     _endCued.clear();
+    _glugsCued.clear();
     _sealCued.clear();
     _popAt = null;
     for (final f in restored) {
@@ -372,6 +397,18 @@ class Juice {
       if (!_streamCued.contains(p) && now >= p.start + p.timing.move) {
         _streamCued.add(p);
         _cue(JuiceCueKind.streamStart, p.from, p.color);
+      }
+      // Layers due before the Pour lands; one cut short plays no more.
+      for (var k = _glugsCued[p] ?? 0; k < p.layers; k++) {
+        final at = p.start + p.timing.glugAt(k);
+        if (now < at || at >= p.landedAt) break;
+        _glugsCued[p] = k + 1;
+        _cue(
+          JuiceCueKind.glug,
+          p.to,
+          p.color,
+          fill: p.targetBefore.length + k + 1,
+        );
       }
       if (now >= p.landedAt) _land(p);
       if (now >= p.endsAt) _drop(p);
@@ -391,15 +428,18 @@ class Juice {
   }
 
   void _land(PourAnim p) {
-    if (_endCued.add(p)) _cue(JuiceCueKind.pourEnd, p.to, p.color);
+    if (!_endCued.add(p)) return;
+    _cue(JuiceCueKind.pourEnd, p.to, p.color);
+    if (p.leavesWaiting) _cue(JuiceCueKind.waiting, p.to, p.color);
   }
 
   void _drop(PourAnim p) {
     _pours.remove(p);
     _streamCued.remove(p);
     _endCued.remove(p);
+    _glugsCued.remove(p);
   }
 
-  void _cue(JuiceCueKind kind, int flask, int color) =>
-      onCue?.call(JuiceCue(kind, flask, color));
+  void _cue(JuiceCueKind kind, int flask, int color, {int fill = 0}) =>
+      onCue?.call(JuiceCue(kind, flask, color, fill: fill));
 }

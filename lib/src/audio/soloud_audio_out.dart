@@ -41,21 +41,11 @@ class SoloudAudioOut implements AudioOut {
   }
 
   @override
-  void play(
-    Sfx sfx, {
-    int variant = 0,
-    double volume = 1,
-    double speed = 1,
-    Duration delay = Duration.zero,
-  }) {
+  void play(Sfx sfx, {int variant = 0, double volume = 1, double speed = 1}) {
     start();
     final source = _sources[sfx.asset(variant)];
     if (source == null) return;
-    if (delay > Duration.zero) {
-      Timer(delay, () => _fire(source, volume, speed));
-    } else {
-      _fire(source, volume, speed);
-    }
+    _fire(source, volume, speed);
   }
 
   void _fire(AudioSource source, double volume, double speed) {

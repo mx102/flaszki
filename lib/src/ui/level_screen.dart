@@ -95,7 +95,12 @@ class _LevelScreenState extends State<LevelScreen>
   bool _built = false;
 
   // Juice (#27): a view layer; the Game is already updated on tap.
-  late final Juice _juice = Juice(onCue: (c) => widget.onJuice?.call(c));
+  late final Juice _juice = Juice(
+    onCue: (c) {
+      widget.audio?.cue(c);
+      widget.onJuice?.call(c);
+    },
+  );
   late final Ticker _ticker = createTicker(_tick);
   double _now = 0, _base = 0;
   Duration _reflow = reflowDuration;
@@ -235,6 +240,7 @@ class _LevelScreenState extends State<LevelScreen>
     if (play == null || !play.isSolved || _solvedTimer != null) return;
     if (_juice.isActive) return;
     _solvedTimer = Timer(solvedAutoAdvance, _advance);
+    widget.audio?.solved(); // the overlay shows from this frame
   }
 
   void _advance() {
@@ -372,7 +378,8 @@ class _LevelScreenState extends State<LevelScreen>
                           ),
                         ],
                       ),
-                      if (_deadEnd.showing && !play.isSolved)
+                      if (_deadEnd.showing &&
+                          !play.isSolved)
                         Positioned(
                           left: boardPadding,
                           right: boardPadding,
