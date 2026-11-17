@@ -5,11 +5,13 @@ import 'package:url_launcher/url_launcher.dart';
 
 import 'src/audio/game_audio.dart';
 import 'src/play/level_sequencer.dart';
+import 'src/l10n.dart';
 import 'src/save/save_store.dart';
 import 'src/ui/color_fill.dart';
 import 'src/ui/level_screen.dart';
-import 'src/ui/placeholder_style.dart';
 import 'src/ui/settings_sheet.dart';
+import 'src/ui/style/backdrop_painter.dart';
+import 'src/ui/style/style_a.dart';
 
 /// Widest portrait aspect of the game column (ADR 0006).
 const double kPortraitAspect = 9 / 16;
@@ -91,13 +93,21 @@ class _FlaszkiAppState extends State<FlaszkiApp> {
     title: 'Flaszki',
     navigatorKey: _nav,
     debugShowCheckedModeBanner: false,
-    theme: ThemeData(brightness: Brightness.dark),
+    // System locale, fallback English (first supported) (PRD §4.7).
+    localizationsDelegates: appLocalizationsDelegates,
+    supportedLocales: AppLocalizations.supportedLocales,
+    theme: ThemeData(
+      brightness: Brightness.dark,
+      fontFamily: StyleA.serif,
+      colorScheme: const ColorScheme.dark(surface: StyleA.skyBottom),
+    ),
+    color: StyleA.skyTop,
     home: ValueListenableBuilder(
       valueListenable: _settings,
       builder: (context, s, child) =>
           ColorblindPatterns(enabled: s.colorblindPatterns, child: child!),
-      child: ColoredBox(
-        color: PlaceholderStyle.sides,
+      child: CustomPaint(
+        painter: const BackdropPainter(),
         child: LayoutBuilder(
           builder: (context, box) => Center(
             child: SizedBox(

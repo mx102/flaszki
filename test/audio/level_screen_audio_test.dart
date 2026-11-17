@@ -1,4 +1,5 @@
 import 'package:flaszki/src/audio/game_audio.dart';
+import 'package:flaszki/src/l10n.dart';
 import 'package:flaszki/src/ui/level_screen.dart';
 import 'package:flaszki_logic/flaszki_logic.dart';
 import 'package:flutter/foundation.dart';
@@ -37,6 +38,8 @@ Future<FakeAudioOut> _pump(WidgetTester tester) async {
   final out = FakeAudioOut();
   await tester.pumpWidget(
     MaterialApp(
+      localizationsDelegates: appLocalizationsDelegates,
+      supportedLocales: AppLocalizations.supportedLocales,
       home: LevelScreen(
         levelSource: _source,
         deadEndRunner: (s) => SynchronousFuture(isDeadEnd(s)),
