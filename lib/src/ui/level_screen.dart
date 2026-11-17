@@ -5,12 +5,14 @@ import 'package:flutter/services.dart';
 import 'package:material_ui/material_ui.dart';
 
 import '../play/board_layout.dart';
+import '../play/dead_end_checker.dart';
 import '../play/goal_queue_view.dart';
 import '../play/level_sequencer.dart';
 import '../play/play_controller.dart';
 import '../play/restart_arm.dart';
 import 'board_view.dart';
 import 'bottom_bar.dart';
+import 'dead_end_banner.dart';
 import 'goal_queue_strip.dart';
 import 'placeholder_style.dart';
 
@@ -34,6 +36,7 @@ class LevelScreen extends StatefulWidget {
     this.onPour,
     this.onSolved,
     this.onOpenSettings,
+    this.deadEndRunner,
   });
 
   final LevelSource levelSource;
@@ -47,6 +50,9 @@ class LevelScreen extends StatefulWidget {
   final void Function(Game game)? onPour;
   final void Function(int levelNumber)? onSolved;
   final VoidCallback? onOpenSettings;
+
+  /// Dead End check (#25); default [checkDeadEndOffThread].
+  final DeadEndRunner? deadEndRunner;
 
   @override
   State<LevelScreen> createState() => _LevelScreenState();
@@ -68,6 +74,13 @@ class _LevelScreenState extends State<LevelScreen> {
   Timer? _solvedTimer;
   bool _advancing = false;
   bool _built = false;
+  late final DeadEndChecker _deadEnd = DeadEndChecker(
+    run: widget.deadEndRunner,
+    revealDelay: reflowDuration,
+    onChanged: () {
+      if (mounted) setState(() {});
+    },
+  );
 
   @override
   void initState() {
@@ -79,6 +92,7 @@ class _LevelScreenState extends State<LevelScreen> {
   void dispose() {
     _armTimer?.cancel();
     _solvedTimer?.cancel();
+    _deadEnd.dispose();
     super.dispose();
   }
 
@@ -95,6 +109,7 @@ class _LevelScreenState extends State<LevelScreen> {
       _arm.disarm();
       _advancing = false;
     });
+    _deadEnd.stateChanged(_play!.game.state);
     widget.onLevelStarted?.call(_levelNumber, _play!.game);
   }
 
@@ -102,12 +117,14 @@ class _LevelScreenState extends State<LevelScreen> {
     final play = _play;
     if (play == null) return;
     final effect = play.tapFlask(i);
+    _deadEnd.input();
     setState(() {
       if (effect is Rejected) {
         _shakes[effect.target] = (_shakes[effect.target] ?? 0) + 1;
       }
     });
     if (effect is Poured) {
+      _deadEnd.stateChanged(play.game.state, afterPour: true);
       widget.onPour?.call(play.game);
       if (play.isSolved) _solved();
     }
@@ -133,6 +150,7 @@ class _LevelScreenState extends State<LevelScreen> {
       _arm.disarm();
       play.undo();
     });
+    _deadEnd.stateChanged(play.game.state);
     widget.onPour?.call(play.game);
   }
 
@@ -142,6 +160,7 @@ class _LevelScreenState extends State<LevelScreen> {
     _armTimer?.cancel();
     if (_arm.press(_clock.elapsed)) {
       setState(play.restart);
+      _deadEnd.stateChanged(play.game.state);
       widget.onPour?.call(play.game);
     } else {
       setState(() {});
@@ -150,6 +169,19 @@ class _LevelScreenState extends State<LevelScreen> {
         if (mounted) setState(_arm.disarm);
       });
     }
+  }
+
+  /// Banner Restart: no confirm (PRD §4.4).
+  void _restartNow() {
+    final play = _play;
+    if (play == null) return;
+    _armTimer?.cancel();
+    setState(() {
+      _arm.disarm();
+      play.restart();
+    });
+    _deadEnd.stateChanged(play.game.state);
+    widget.onPour?.call(play.game);
   }
 
   bool _back() {
@@ -219,6 +251,16 @@ class _LevelScreenState extends State<LevelScreen> {
                           ),
                         ],
                       ),
+                      if (_deadEnd.showing && !play.isSolved)
+                        Positioned(
+                          left: boardPadding,
+                          right: boardPadding,
+                          bottom: bottomBarHeight + boardPadding,
+                          child: DeadEndBanner(
+                            onUndo: _undo,
+                            onRestart: _restartNow,
+                          ),
+                        ),
                       if (play.isSolved)
                         Positioned.fill(child: _SolvedOverlay(onTap: _advance)),
                     ],
