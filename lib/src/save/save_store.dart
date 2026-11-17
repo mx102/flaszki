@@ -85,11 +85,11 @@ class SaveStore {
   void levelStarted(int levelNumber, Game game) {
     _levelNumber = levelNumber;
     _write(progressKey, {'levelNumber': levelNumber});
-    changed(game);
+    gameChanged(game);
   }
 
   /// After every Pour, Undo and Restart.
-  void changed(Game game) =>
+  void gameChanged(Game game) =>
       _write(levelKey, {'levelNumber': _levelNumber, ...game.toJson()});
 
   /// On Solved: Level Number++, `level` cleared.

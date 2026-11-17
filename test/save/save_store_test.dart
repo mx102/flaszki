@@ -38,7 +38,7 @@ void main() {
     final moves = generate(3).report.solution!.take(3).toList();
     for (final p in moves) {
       game.pour(p.from, p.to);
-      store.changed(game);
+      store.gameChanged(game);
     }
 
     final s = launch().initial; // fresh instance = relaunch
@@ -60,14 +60,14 @@ void main() {
     store.levelStarted(2, game);
     final p = generate(2).report.solution!.first;
     game.pour(p.from, p.to);
-    store.changed(game);
+    store.gameChanged(game);
     game.undo();
-    store.changed(game);
+    store.gameChanged(game);
     expect(launch().initial.game!.pours, isEmpty);
     game.pour(p.from, p.to);
-    store.changed(game);
+    store.gameChanged(game);
     game.restart();
-    store.changed(game);
+    store.gameChanged(game);
     expect(launch().initial.game!.canUndo, isFalse);
   });
 
@@ -77,7 +77,7 @@ void main() {
     store.levelStarted(1, game);
     for (final p in generate(1).report.solution!) {
       game.pour(p.from, p.to);
-      store.changed(game);
+      store.gameChanged(game);
     }
     store.solved(1);
     final s = launch().initial;
@@ -92,7 +92,7 @@ void main() {
     store.levelStarted(1, game);
     for (final p in generate(1).report.solution!) {
       game.pour(p.from, p.to);
-      store.changed(game);
+      store.gameChanged(game);
     }
     final s = launch().initial;
     expect(s.levelNumber, 2);
@@ -117,7 +117,7 @@ void main() {
       store.levelStarted(4, game);
       for (final p in generate(4).report.solution!.take(2)) {
         game.pour(p.from, p.to);
-        store.changed(game);
+        store.gameChanged(game);
       }
       return game;
     }

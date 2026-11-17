@@ -127,7 +127,7 @@ class _FlaszkiAppState extends State<FlaszkiApp> {
                     widget.save?.initial.levelNumber ?? widget.startLevel,
                 initialGame: widget.save?.initial.game,
                 onLevelStarted: widget.save?.levelStarted,
-                onPour: widget.save?.changed,
+                onGameChanged: widget.save?.gameChanged,
                 onSolved: widget.save?.solved,
                 onOpenSettings: _openSettings,
                 audio: _audio,
