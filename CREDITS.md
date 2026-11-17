@@ -49,8 +49,7 @@ reserved**, not CC BY (ADR 0003; see README, Trademark).
 
 ## Software
 
-Built with [Flutter](https://flutter.dev) (BSD-3-Clause) and
-[Flame](https://flame-engine.org) (MIT). Sound plays via
+Built with [Flutter](https://flutter.dev) (BSD-3-Clause). Sound plays via
 [flutter_soloud](https://pub.dev/packages/flutter_soloud) (MIT; SoLoud and
 miniaudio are zlib / public domain; Ogg Vorbis decoders BSD-3-Clause).
 Dependency licenses are checked in CI.

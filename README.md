@@ -8,7 +8,7 @@ Spec: [`docs/prd.md`](docs/prd.md), [`GLOSSARY.md`](GLOSSARY.md), [`docs/adr/`](
 
 ## Layout
 
-- `/` — Flutter app (Flame): rendering, input, animation, audio, persistence I/O.
+- `/` — Flutter app: rendering, input, animation, audio, persistence I/O.
 - `packages/flaszki_logic/` — pure-Dart logic (no Flutter/Flame imports): rules,
   generator, solver, save model.
 

@@ -12,7 +12,6 @@ workspace:
 dependencies:
   flutter:
     sdk: flutter
-  flame: ^1.38.2
   flaszki_logic:
     path: packages/flaszki_logic
   material_ui: ^1.11.1
