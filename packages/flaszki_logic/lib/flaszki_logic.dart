@@ -6,6 +6,7 @@ library;
 
 export 'src/board_state.dart';
 export 'src/curve.dart';
+export 'src/dead_end.dart';
 export 'src/game.dart';
 export 'src/generator.dart';
 export 'src/level.dart' hide listEquals;
