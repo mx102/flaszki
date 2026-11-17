@@ -3,6 +3,7 @@ import 'dart:math' as math;
 import 'package:material_ui/material_ui.dart';
 
 import 'src/play/level_sequencer.dart';
+import 'src/save/save_store.dart';
 import 'src/ui/level_screen.dart';
 import 'src/ui/placeholder_style.dart';
 
@@ -16,12 +17,16 @@ class FlaszkiApp extends StatelessWidget {
     super.key,
     this.levelSource = generateLevelOffThread,
     this.startLevel = 1,
+    this.save,
   });
 
   final LevelSource levelSource;
 
-  /// Level to open; save (#24) passes the saved Level Number.
+  /// Level to open when there is no [save].
   final int startLevel;
+
+  /// Local save (#24): resumes from it and writes to it; `null` = none.
+  final SaveStore? save;
 
   @override
   Widget build(BuildContext context) => MaterialApp(
@@ -37,7 +42,11 @@ class FlaszkiApp extends StatelessWidget {
             height: box.maxHeight,
             child: LevelScreen(
               levelSource: levelSource,
-              startLevel: startLevel,
+              startLevel: save?.initial.levelNumber ?? startLevel,
+              initialGame: save?.initial.game,
+              onLevelStarted: save?.levelStarted,
+              onPour: save?.changed,
+              onSolved: save?.solved,
             ),
           ),
         ),
