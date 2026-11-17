@@ -1,9 +1,10 @@
 import 'package:material_ui/material_ui.dart';
 
+import '../l10n.dart';
 import 'style/style_a.dart';
 
 /// Non-modal Dead End hint (PRD §4.4) with inline Undo and Restart (this
-/// Restart needs no confirm). Strings localized in #30; look in #26.
+/// Restart needs no confirm).
 class DeadEndBanner extends StatelessWidget {
   const DeadEndBanner({
     super.key,
@@ -28,19 +29,25 @@ class DeadEndBanner extends StatelessWidget {
         children: [
           Expanded(
             child: Text(
-              'No way to finish from here',
+              context.l10n.deadEnd,
               style: StyleA.serifItalic.copyWith(fontSize: 16),
             ),
           ),
           TextButton(
             key: const ValueKey('dead-end-undo'),
             onPressed: onUndo,
-            child: const Text('Undo', style: TextStyle(color: StyleA.text)),
+            child: Text(
+              context.l10n.undo,
+              style: const TextStyle(color: StyleA.text),
+            ),
           ),
           TextButton(
             key: const ValueKey('dead-end-restart'),
             onPressed: onRestart,
-            child: const Text('Restart', style: TextStyle(color: StyleA.armed)),
+            child: Text(
+              context.l10n.restart,
+              style: const TextStyle(color: StyleA.armed),
+            ),
           ),
         ],
       ),

@@ -1,5 +1,6 @@
 import 'package:flutter/widgets.dart';
 
+import '../l10n.dart';
 import '../play/goal_queue_view.dart';
 import 'color_fill.dart';
 import 'style/orb_painter.dart';
@@ -26,7 +27,7 @@ class GoalQueueStrip extends StatelessWidget {
           children: [
             _Orb(key: const ValueKey('orb-next'), color: queue.head, size: 42),
             const SizedBox(height: 1),
-            const Text('NEXT', style: StyleA.smallCaps),
+            Text(context.l10n.goalQueueNext, style: StyleA.smallCaps),
           ],
         ),
         const SizedBox(width: 14),

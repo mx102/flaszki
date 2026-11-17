@@ -1,0 +1,8 @@
+# Flutter gen-l10n (PRD §4.7). Add a string: key in lib/l10n/app_en.arb
+# (+ @key description) and lib/l10n/app_pl.arb, then `flutter gen-l10n`.
+arb-dir: lib/l10n
+template-arb-file: app_en.arb
+output-dir: lib/l10n/gen
+output-localization-file: app_localizations.dart
+nullable-getter: false
+format: true
