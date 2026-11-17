@@ -89,7 +89,14 @@ class _FlaszkiAppState extends State<FlaszkiApp> {
   );
 
   @override
-  Widget build(BuildContext context) => MaterialApp(
+  Widget build(BuildContext context) => Listener(
+    // Any pointer down is the web audio unlock gesture (#29).
+    onPointerDown: (_) => widget.audioOut?.unlock(),
+    behavior: HitTestBehavior.translucent,
+    child: _app(),
+  );
+
+  Widget _app() => MaterialApp(
     title: 'Flaszki',
     navigatorKey: _nav,
     debugShowCheckedModeBanner: false,

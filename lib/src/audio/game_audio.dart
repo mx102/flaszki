@@ -48,6 +48,10 @@ abstract interface class AudioOut {
   /// Fire-and-forget, now; [speed] scales pitch.
   void play(Sfx sfx, {int variant = 0, double volume = 1, double speed = 1});
 
+  /// A user gesture began (pointer down anywhere): web may start the engine
+  /// now (browsers need a gesture), before the first sound is asked for.
+  void unlock();
+
   /// Silences all output (app backgrounded).
   void setMuted(bool muted);
 }

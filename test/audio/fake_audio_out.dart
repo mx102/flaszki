@@ -16,11 +16,17 @@ class FakeAudioOut implements AudioOut {
   final plays = <Played>[];
   bool muted = false;
 
+  /// [AudioOut.unlock] calls (user gestures seen).
+  int unlocks = 0;
+
   List<Sfx> get sfx => [for (final p in plays) p.sfx];
 
   @override
   void play(Sfx sfx, {int variant = 0, double volume = 1, double speed = 1}) =>
       plays.add(Played(sfx, variant, volume, speed));
+
+  @override
+  void unlock() => unlocks++;
 
   @override
   void setMuted(bool muted) => this.muted = muted;

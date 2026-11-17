@@ -4,13 +4,14 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_soloud/flutter_soloud.dart';
 
 import 'game_audio.dart';
+import 'warmup_queue.dart';
 
 /// [AudioOut] on flutter_soloud (PRD §6). Untested glue: behaviour lives in
-/// [GameAudio].
+/// [GameAudio] and [WarmupQueue].
 ///
-/// Web starts the engine lazily on the first sound, which always follows a
-/// tap: that is the web unlock (browsers need a user gesture). Sounds asked
-/// for while loading are dropped. iOS session = `ambient` (AppDelegate), so it
+/// Web starts the engine on the first pointer down ([unlock], the gesture
+/// browsers need); sounds asked for while it loads play once it is ready
+/// (if still fresh, see [WarmupQueue]). iOS session = `ambient` (AppDelegate), so it
 /// mixes with other apps and respects the silent switch; Android does not
 /// request audio focus, so nothing ducks.
 class SoloudAudioOut implements AudioOut {
@@ -18,12 +19,17 @@ class SoloudAudioOut implements AudioOut {
 
   final SoLoud _soloud;
   final Map<String, AudioSource> _sources = {};
+  final WarmupQueue<(String, double, double)> _pending = WarmupQueue();
   Future<void>? _starting;
+  bool _ready = false;
   bool _muted = false;
 
   /// Starts the engine and loads every sound (once). Native: call at launch;
-  /// web: runs on the first sound (a tap = the unlock gesture).
+  /// web: runs on the first pointer down ([unlock]).
   Future<void> start() => _starting ??= _load();
+
+  @override
+  void unlock() => start();
 
   Future<void> _load() async {
     try {
@@ -38,14 +44,22 @@ class SoloudAudioOut implements AudioOut {
     } on Object catch (e) {
       debugPrint('audio unavailable: $e');
     }
+    _ready = true;
+    for (final (key, volume, speed) in _pending.drain()) {
+      final source = _sources[key];
+      if (source != null) _fire(source, volume, speed);
+    }
   }
 
   @override
   void play(Sfx sfx, {int variant = 0, double volume = 1, double speed = 1}) {
     start();
     final source = _sources[sfx.asset(variant)];
-    if (source == null) return;
-    _fire(source, volume, speed);
+    if (source != null) {
+      _fire(source, volume, speed);
+    } else if (!_ready) {
+      _pending.add((sfx.asset(variant), volume, speed));
+    }
   }
 
   void _fire(AudioSource source, double volume, double speed) {
