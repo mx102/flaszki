@@ -23,6 +23,8 @@ Michał Dratkowski (Flaszki), licensed
 | `assets/audio/seal_3.ogg` | Seal: cork pop | CC BY 4.0 |
 | `assets/audio/queueAdvance_1.ogg` | Goal Queue advance: orb chime | CC BY 4.0 |
 | `assets/audio/waitingCork_1.ogg` | Waiting Completed Flask: cork squeak | CC BY 4.0 |
+| `assets/audio/waitingCork_2.ogg` | Waiting Completed Flask: cork squeak | CC BY 4.0 |
+| `assets/audio/waitingCork_3.ogg` | Waiting Completed Flask: cork squeak | CC BY 4.0 |
 | `assets/audio/solved_1.ogg` | Solved: chime arpeggio | CC BY 4.0 |
 | `assets/audio/undo_1.ogg` | Undo: reverse swish | CC BY 4.0 |
 

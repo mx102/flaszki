@@ -101,10 +101,11 @@ def orb_chime():
     return norm(x, 0.4)
 
 
-def cork_squeak():
-    dur = 0.2
+def cork_squeak(v):
+    dur = [0.2, 0.17, 0.23][v]
     t = t_axis(dur)
-    f = 1350 + 250 * t / dur + 120 * np.sin(2 * np.pi * 38 * t)
+    f0, rise, wob = [(1350, 250, 38), (1500, 180, 44), (1220, 300, 33)][v]
+    f = f0 + rise * t / dur + 120 * np.sin(2 * np.pi * wob * t)
     env = np.minimum(1, t / 0.03) * np.minimum(1, (dur - t) / 0.06)
     x = np.sin(2 * np.pi * np.cumsum(f) / SR) * env
     x += 0.3 * np.sin(2 * np.pi * 2 * np.cumsum(f) / SR) * env
@@ -148,7 +149,9 @@ SOUNDS = {
     "seal_2": lambda: cork_pop(1),
     "seal_3": lambda: cork_pop(2),
     "queueAdvance_1": orb_chime,
-    "waitingCork_1": cork_squeak,
+    "waitingCork_1": lambda: cork_squeak(0),
+    "waitingCork_2": lambda: cork_squeak(1),
+    "waitingCork_3": lambda: cork_squeak(2),
     "solved_1": solved_arpeggio,
     "undo_1": undo_swish,
 }

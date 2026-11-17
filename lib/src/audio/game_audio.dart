@@ -23,7 +23,7 @@ enum Sfx {
   queueAdvance,
 
   /// Waiting Completed Flask appears: quiet cork squeak.
-  waitingCork(volume: 0.5),
+  waitingCork(variants: 3, volume: 0.5),
 
   /// Solved: chime arpeggio (~1.5 s).
   solved,

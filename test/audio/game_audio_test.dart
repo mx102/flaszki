@@ -61,8 +61,8 @@ void main() {
     expect('${again.plays}', '${out.plays}');
   });
 
-  test('clink, glug and cork pop each have 2–3 variants, all used', () {
-    for (final sfx in [Sfx.select, Sfx.pour, Sfx.seal]) {
+  test('clink, glug and cork (pop, squeak) have 2–3 variants, all used', () {
+    for (final sfx in [Sfx.select, Sfx.pour, Sfx.seal, Sfx.waitingCork]) {
       expect(sfx.variants, inInclusiveRange(2, 3));
     }
     for (var i = 0; i < 50; i++) {
