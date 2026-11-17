@@ -35,7 +35,8 @@ class LevelSequencer {
   /// Loads Level [startLevel] and starts pre-generating the next.
   Future<GeneratedLevel> start() async {
     final g = await _source(startLevel);
-    return _began(startLevel, g);
+    _began(startLevel, g);
+    return g;
   }
 
   /// Resumes a saved Level [startLevel] (not regenerated: it finishes from
@@ -46,10 +47,12 @@ class LevelSequencer {
   Future<GeneratedLevel> advance() async {
     final n = _levelNumber + 1;
     final g = await (_next ?? _source(n));
-    return _began(n, g);
+    _began(n, g);
+    return g;
   }
 
-  T _began<T extends GeneratedLevel?>(int n, T g) {
+  /// Level [n] is current ([g] = `null` when resumed from a save).
+  void _began(int n, GeneratedLevel? g) {
     _levelNumber = n;
     _current = g;
     _nextReady = false;
@@ -58,6 +61,5 @@ class LevelSequencer {
     next.then((_) {
       if (identical(_next, next)) _nextReady = true;
     }, onError: (Object _) {});
-    return g;
   }
 }
