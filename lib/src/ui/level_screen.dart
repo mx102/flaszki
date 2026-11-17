@@ -30,6 +30,7 @@ class LevelScreen extends StatefulWidget {
     super.key,
     required this.levelSource,
     this.startLevel = 1,
+    this.initialGame,
     this.onLevelStarted,
     this.onPour,
     this.onSolved,
@@ -38,6 +39,9 @@ class LevelScreen extends StatefulWidget {
 
   final LevelSource levelSource;
   final int startLevel;
+
+  /// Saved Level [startLevel] in progress (#24); else it is generated.
+  final Game? initialGame;
 
   /// Level N is in play with this [Game] (fresh, or restored later by #24).
   final void Function(int levelNumber, Game game)? onLevelStarted;
@@ -72,7 +76,13 @@ class _LevelScreenState extends State<LevelScreen> {
   @override
   void initState() {
     super.initState();
-    _seq.start().then(_begin);
+    final restored = widget.initialGame;
+    if (restored == null) {
+      _seq.start().then(_begin);
+    } else {
+      _seq.resume();
+      _beginGame(restored);
+    }
   }
 
   @override
@@ -84,13 +94,14 @@ class _LevelScreenState extends State<LevelScreen> {
 
   void _update(VoidCallback f) => _built ? setState(f) : f();
 
-  void _begin(GeneratedLevel g) {
+  void _begin(GeneratedLevel g) => _beginGame(Game(g.level));
+
+  void _beginGame(Game game) {
     if (!mounted) return;
     _update(() {
-      final game = Game(g.level);
       _play = PlayController(game);
       _levelNumber = _seq.levelNumber;
-      _flaskCount = g.level.flasks.length;
+      _flaskCount = game.level.flasks.length;
       _shakes.clear();
       _arm.disarm();
       _advancing = false;

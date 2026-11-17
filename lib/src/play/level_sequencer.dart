@@ -38,6 +38,10 @@ class LevelSequencer {
     return _began(startLevel, g);
   }
 
+  /// Resumes a saved Level [startLevel] (not regenerated: it finishes from
+  /// its snapshot, ADR 0005) and starts pre-generating the next.
+  void resume() => _began(startLevel, null);
+
   /// Moves to Level N+1 (waits only if it is still generating).
   Future<GeneratedLevel> advance() async {
     final n = _levelNumber + 1;
@@ -45,7 +49,7 @@ class LevelSequencer {
     return _began(n, g);
   }
 
-  GeneratedLevel _began(int n, GeneratedLevel g) {
+  T _began<T extends GeneratedLevel?>(int n, T g) {
     _levelNumber = n;
     _current = g;
     _nextReady = false;
