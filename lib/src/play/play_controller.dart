@@ -29,7 +29,8 @@ class Rejected extends TapEffect {
   final int target;
 }
 
-/// Tap ignored (Level Solved or Flask not on the board).
+/// Tap ignored (Level Solved, Flask not on the board, or an empty Flask with
+/// nothing selected).
 class Ignored extends TapEffect {
   const Ignored();
 }
@@ -51,7 +52,8 @@ class PlayController {
     if (isSolved || !state.isOnBoard(i)) return const Ignored();
     final sel = _selected;
     if (sel == null) {
-      if (state.flasks[i].isEmpty) return Rejected(i);
+      // Nothing to pour: not an invalid Pour target, so no shake (§4.2).
+      if (state.flasks[i].isEmpty) return const Ignored();
       _selected = i;
       return Selected(i);
     }
