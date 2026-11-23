@@ -1,0 +1,28 @@
+# Generator golden tests compiled AOT (PRD §11, ADR 0002/0007): nightly,
+# on demand, and called by the release workflow.
+name: Golden AOT
+
+on:
+  schedule:
+    - cron: "17 3 * * *"
+  workflow_dispatch:
+  workflow_call:
+
+jobs:
+  golden-aot:
+    name: Golden levels (AOT)
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version-file: pubspec.yaml # environment.flutter pin
+          cache: true
+      - run: flutter pub get
+      - name: Compile and run golden check
+        working-directory: packages/flaszki_logic
+        run: |
+          mkdir -p build
+          dart compile exe tool/golden.dart -o build/golden
+          ./build/golden

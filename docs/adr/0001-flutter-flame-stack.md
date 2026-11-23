@@ -17,3 +17,7 @@ Targets: Android, iOS, macOS, Windows, Linux, plus web. Web is secondary: online
 - Splash physics and particles take more hand-written code than in Godot.
 - No isolates on web: the generator runs on the main thread there. ADR 0002 rules out a web worker and uses the wasm web build, with Flutter's dart2js fallback for browsers that lack the required Wasm features.
 - Revisit if the generator + solver performance prototype misses the ~200 ms budget by more than 2× on Dart AOT or web.
+
+## Amendment (2026-11-17)
+
+Juice (pour, stream, splash, wobble, seal fly-in) is drawn with Flutter `CustomPainter`s driven by a `Ticker`; Flame is not used and has been removed as a dependency. Flame may be re-added later if effects outgrow plain painters.

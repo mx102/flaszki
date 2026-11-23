@@ -1,0 +1,55 @@
+# Weekly unsigned build matrix for all 6 targets (PRD §11, ADR 0007):
+# keeps channels that haven't opened yet compiling.
+name: Weekly builds
+
+on:
+  schedule:
+    - cron: "41 4 * * 1"
+  workflow_dispatch:
+
+jobs:
+  build:
+    name: Build ${{ matrix.target }}
+    runs-on: ${{ matrix.os }}
+    strategy:
+      fail-fast: false
+      matrix:
+        include:
+          - target: android
+            os: ubuntu-latest
+            build: flutter build apk --release
+          - target: ios
+            os: macos-latest
+            build: flutter build ios --release --no-codesign
+          - target: macos
+            os: macos-latest
+            build: flutter build macos --release
+          - target: windows
+            os: windows-latest
+            build: flutter build windows --release
+          - target: linux
+            os: ubuntu-latest
+            build: flutter build linux --release
+          - target: web
+            os: ubuntu-latest
+            build: flutter build web --wasm --release
+    steps:
+      - uses: actions/checkout@v4
+      - if: matrix.target == 'android'
+        uses: actions/setup-java@v4
+        with:
+          distribution: temurin
+          java-version: 17
+      - if: matrix.target == 'linux'
+        name: Linux build deps
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y clang cmake ninja-build pkg-config libgtk-3-dev liblzma-dev libstdc++-12-dev
+      - uses: subosito/flutter-action@v2
+        with:
+          channel: stable
+          flutter-version-file: pubspec.yaml # environment.flutter pin
+          cache: true
+      - run: flutter pub get
+      - name: Build
+        run: ${{ matrix.build }}

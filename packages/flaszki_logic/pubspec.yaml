@@ -1,0 +1,12 @@
+name: flaszki_logic
+description: Pure-Dart game logic for Flaszki (no Flutter/Flame imports).
+publish_to: 'none'
+version: 0.1.0
+resolution: workspace
+
+environment:
+  sdk: ^3.14.0
+
+dev_dependencies:
+  lints: ^6.0.0
+  test: ^1.25.6

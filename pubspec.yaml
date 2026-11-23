@@ -1,0 +1,67 @@
+name: flaszki
+description: "Flaszki: a fluid-sorting puzzle game."
+publish_to: 'none'
+version: 0.1.0+1
+
+environment:
+  sdk: ^3.14.0
+  # Exact pin: CI reads it (flutter-action `flutter-version-file`).
+  flutter: 3.50.0
+
+workspace:
+  - packages/flaszki_logic
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flaszki_logic:
+    path: packages/flaszki_logic
+  material_ui: ^1.11.1
+  shared_preferences: ^2.5.6
+  url_launcher: ^6.3.3
+  package_info_plus: ^10.2.2
+  flutter_soloud: ^5.3.0
+  flutter_localizations:
+    sdk: flutter
+  intl: ^0.20.2
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^6.0.0
+  flutter_launcher_icons: ^0.14.4
+
+flutter:
+  generate: true
+  uses-material-design: true
+  assets:
+    - CREDITS.md
+    - assets/audio/
+  fonts:
+    - family: EB Garamond
+      fonts:
+        - asset: assets/fonts/EBGaramond.ttf
+        - asset: assets/fonts/EBGaramond-Italic.ttf
+          style: italic
+
+# App icon (all rights reserved, ADR 0003). Regenerate:
+#   flutter test tool/render_icon.dart && dart run flutter_launcher_icons
+flutter_launcher_icons:
+  image_path: assets/icon/icon.png
+  android: true
+  adaptive_icon_background: assets/icon/icon_background.png
+  adaptive_icon_foreground: assets/icon/icon_foreground.png
+  ios: true
+  remove_alpha_ios: true
+  web:
+    generate: true
+    image_path: assets/icon/icon_rounded.png
+    background_color: '#0a1220'
+    theme_color: '#1a2f4d'
+  windows:
+    generate: true
+    image_path: assets/icon/icon_rounded.png
+    icon_size: 256
+  macos:
+    generate: true
+    image_path: assets/icon/icon_macos.png
