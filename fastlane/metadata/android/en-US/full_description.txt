@@ -1,0 +1,15 @@
+Pour layers of color between flasks until every flask holds a single color.
+
+The twist: the Goal Queue at the top says which color to seal next. Fill a flask with the head color and it is corked and lifted off the board. Finish another color too early and it waits, corked, for its turn. Plan your pours around the queue.
+
+• Endless numbered levels, generated on your device. Every level is checked to be solvable in queue order.
+• No lose screen. If you reach a dead end, Flaszki tells you, and you can undo or restart.
+• Unlimited undo, back to the start of the level.
+• Calm, tactile animations and sounds: tilting flasks, streams, splashes, bubbles.
+• Colorblind patterns: optional patterns tell the colors apart.
+• Plays fully offline.
+• English and Polish.
+
+No ads, no in-app purchases, no accounts, no tracking. Flaszki collects no data. Your progress is stored only on your device.
+
+Flaszki is open source (MIT): https://github.com/mx102/flaszki

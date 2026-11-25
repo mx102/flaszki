@@ -4,6 +4,7 @@ Workflows (PRD §11, ADR 0007):
 
 - `ci.yml`: PR checks. `golden-aot.yml`: nightly AOT golden levels. `weekly.yml`: unsigned 6-target build matrix (Mon).
 - `release.yml`: on `vX.Y.Z` tag. Tag must equal `version:` in `pubspec.yaml` (`dart run tool/release_version.dart vX.Y.Z`); build number = run number. Signed AAB → Play internal track; signed APK → GitHub Release. Promote to production manually in Play Console.
+- Store listing, Data safety, content rating: [`play-listing.md`](play-listing.md).
 - Dry run: Actions → Release → Run workflow, `tag` = current `vX.Y.Z`, `dry_run` on. Builds + verifies signed AAB/APK, keeps them as workflow artifacts only.
 
 ## One-time setup (human)
