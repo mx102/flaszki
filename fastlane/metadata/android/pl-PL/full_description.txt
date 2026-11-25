@@ -6,7 +6,7 @@ Haczyk: kolejka celów u góry mówi, który kolor zamknąć jako następny. Nap
 • Nie da się przegrać. Gdy utkniesz, Flaszki to pokażą, a Ty możesz cofnąć ruch albo zacząć od nowa.
 • Cofanie bez limitu, aż do początku poziomu.
 • Spokojne, namacalne animacje i dźwięki: przechylane flaszki, strumienie, plusk, bąbelki.
-• Wzory dla daltonistów: opcjonalny wzór na każdym kolorze.
+• Wzory dla daltonistów: opcjonalne wzory odróżniają kolory.
 • Działa w pełni offline.
 • Po polsku i po angielsku.
 

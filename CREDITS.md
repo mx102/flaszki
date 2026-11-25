@@ -43,9 +43,11 @@ name, author, source URL, license, and what it is used for.
 
 ## App icon
 
-The app icon (`assets/icon/` and the per-platform icon files) is original
-work drawn by `tool/render_icon.dart` from `IconPainter`. It is **all rights
-reserved**, not CC BY (ADR 0003; see README, Trademark).
+The app icon (`assets/icon/`, the per-platform icon files, and the Play
+listing `icon.png` and `featureGraphic.png` under `fastlane/metadata/`) is
+original work drawn from `IconPainter` by `tool/render_icon.dart` and
+`tool/render_store.dart`. It is **all rights reserved**, not CC BY (ADR 0003;
+see README, Trademark).
 
 ## Software
 

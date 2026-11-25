@@ -6,7 +6,7 @@ The twist: the Goal Queue at the top says which color to seal next. Fill a flask
 • No lose screen. If you reach a dead end, Flaszki tells you, and you can undo or restart.
 • Unlimited undo, back to the start of the level.
 • Calm, tactile animations and sounds: tilting flasks, streams, splashes, bubbles.
-• Colorblind patterns: an optional pattern on every color.
+• Colorblind patterns: optional patterns tell the colors apart.
 • Plays fully offline.
 • English and Polish.
 

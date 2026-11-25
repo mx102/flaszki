@@ -6,7 +6,8 @@
 // icon.png 512² (IconPainter, full-bleed; Play masks it), featureGraphic.png
 // 1024×500, phoneScreenshots/*.png 1080×1920 of the real app in fixed
 // states. Deterministic: levels come from `generate`, states from its solver.
-// Checked by test/tool/store_listing_test.dart.
+// Checked by test/tool/store_listing_test.dart. The icon (also drawn in the
+// feature graphic) is all rights reserved (ADR 0003), not CC BY.
 import 'dart:io';
 import 'dart:math' as math;
 import 'dart:ui' as ui;
@@ -59,12 +60,15 @@ void _write(String path, ByteData png) => File(path)
 Future<ByteData> _png(ui.Image img) async =>
     (await img.toByteData(format: ui.ImageByteFormat.png))!;
 
-/// Pours of [n]'s solution, stopping right after one leaves a Completed
-/// Flask waiting (not the queue head) on the board, plus [extra] pours.
-List<Pour> _toWaiting(int n, {int extra = 0}) {
-  final level = generate(n).level;
-  final sol = solve(BoardState.initial(level)).solution!;
-  var s = BoardState.initial(level);
+/// Solver solution of Level [levelNumber] from its start.
+List<Pour> _solution(int levelNumber) =>
+    solve(BoardState.initial(generate(levelNumber).level)).solution!;
+
+/// Pours of [levelNumber]'s solution, stopping right after one leaves a
+/// Completed Flask waiting (not the queue head) on the board, plus [extra].
+List<Pour> _toWaiting(int levelNumber, {int extra = 0}) {
+  final sol = _solution(levelNumber);
+  var s = BoardState.initial(generate(levelNumber).level);
   for (var k = 0; k < sol.length; k++) {
     s = s.pour(sol[k].from, sol[k].to).state;
     final waiting = [
@@ -73,13 +77,13 @@ List<Pour> _toWaiting(int n, {int extra = 0}) {
     ];
     if (waiting.isNotEmpty) return sol.sublist(0, k + 1 + extra);
   }
-  throw StateError('Level $n: no waiting Completed Flask');
+  throw StateError('Level $levelNumber: no waiting Completed Flask');
 }
 
-/// First Dead End reached from [n]'s start by a seeded random walk.
-List<Pour> _toDeadEnd(int n, {int seed = 1}) {
-  final level = generate(n).level;
-  final rnd = math.Random(seed);
+/// First Dead End reached from [levelNumber]'s start by a seeded random walk.
+List<Pour> _toDeadEnd(int levelNumber) {
+  final level = generate(levelNumber).level;
+  final rnd = math.Random(1);
   for (var walk = 0; walk < 1000; walk++) {
     var s = BoardState.initial(level);
     final pours = <Pour>[];
@@ -100,43 +104,43 @@ List<Pour> _toDeadEnd(int n, {int seed = 1}) {
       if (pours.length >= 4 && isDeadEnd(s)) return pours;
     }
   }
-  throw StateError('Level $n: no Dead End found');
+  throw StateError('Level $levelNumber: no Dead End found');
 }
 
 /// One app state for a screenshot.
 class _Scene {
   const _Scene(
     this.name,
-    this.level, {
+    this.levelNumber, {
     this.pours = const [],
     this.patterns = false,
     this.pourNow,
-    this.settle = const Duration(seconds: 1),
+    this.captureAfter = const Duration(seconds: 1),
   });
 
   final String name;
-  final int level;
+  final int levelNumber;
   final List<Pour> pours;
   final bool patterns;
 
   /// A Pour tapped after restore, captured mid-animation.
   final Pour? pourNow;
-  final Duration settle;
+
+  /// Time from the last input to the capture.
+  final Duration captureAfter;
 }
 
 List<_Scene> _scenes() {
-  final w = _toWaiting(14, extra: 2);
-  final big = generate(38);
-  final bigSol = solve(BoardState.initial(big.level)).solution!;
+  final pourScene = _toWaiting(14, extra: 2);
   return [
     _Scene(
       '1_pour',
       14,
-      pours: w.sublist(0, w.length - 1),
-      pourNow: w.last,
-      settle: const Duration(milliseconds: 380),
+      pours: pourScene.sublist(0, pourScene.length - 1),
+      pourNow: pourScene.last,
+      captureAfter: const Duration(milliseconds: 380),
     ),
-    _Scene('2_queue', 38, pours: bigSol.sublist(0, 10)),
+    _Scene('2_queue', 38, pours: _toWaiting(38)),
     _Scene('3_patterns', 22, pours: _toWaiting(22), patterns: true),
     _Scene('4_dead_end', 18, pours: _toDeadEnd(18)),
   ];
@@ -145,33 +149,37 @@ List<_Scene> _scenes() {
 SaveStore _save(_Scene s) {
   final kv = MemoryStore();
   final store = SaveStore(kv, log: (_) {});
-  final game = Game(generate(s.level).level);
+  final game = Game(generate(s.levelNumber).level);
   for (final p in s.pours) {
     game.pour(p.from, p.to);
   }
   store
-    ..levelStarted(s.level, game)
+    ..levelStarted(s.levelNumber, game)
     ..saveSettings(Settings(colorblindPatterns: s.patterns, sound: false));
   return SaveStore(kv, log: (_) {}); // as on relaunch
 }
 
-Future<void> _capture(WidgetTester tester, String path) async {
+Future<void> _capture(
+  WidgetTester tester,
+  String path, {
+  double pixelRatio = 1,
+}) async {
   final boundary = tester.renderObject<RenderRepaintBoundary>(
     find.byKey(const ValueKey('shot')),
   );
   await tester.runAsync(() async {
-    _write(path, await _png(await boundary.toImage(pixelRatio: _shotDpr)));
+    _write(path, await _png(await boundary.toImage(pixelRatio: pixelRatio)));
   });
 }
 
-/// Lets the off-thread Dead End check finish, then settles the frame.
-Future<void> _settle(WidgetTester tester, Duration d) async {
+/// Lets the off-thread Dead End check finish, then pumps [d].
+Future<void> _awaitDeadEndCheck(WidgetTester tester, Duration d) async {
   await tester.pump();
   await tester.runAsync(() => Future<void>.delayed(const Duration(seconds: 1)));
   await tester.pump(d);
 }
 
-Widget _feature(String locale) => Directionality(
+Widget _featureGraphic(String locale) => Directionality(
   textDirection: TextDirection.ltr,
   child: CustomPaint(
     painter: const BackdropPainter(),
@@ -231,17 +239,9 @@ void main() {
         ..devicePixelRatio = 1;
       addTearDown(tester.view.reset);
       await tester.pumpWidget(
-        RepaintBoundary(key: const ValueKey('shot'), child: _feature(l)),
+        RepaintBoundary(key: const ValueKey('shot'), child: _featureGraphic(l)),
       );
-      final boundary = tester.renderObject<RenderRepaintBoundary>(
-        find.byKey(const ValueKey('shot')),
-      );
-      await tester.runAsync(() async {
-        _write(
-          '$_root/$l/images/featureGraphic.png',
-          await _png(await boundary.toImage()),
-        );
-      });
+      await _capture(tester, '$_root/$l/images/featureGraphic.png');
     });
   }
 
@@ -267,17 +267,18 @@ void main() {
             ),
           ),
         );
-        await _settle(tester, const Duration(seconds: 2));
+        await _awaitDeadEndCheck(tester, const Duration(seconds: 2));
         if (s.pourNow case final p?) {
           await tester.tap(find.byKey(ValueKey('flask-${p.from}')));
           await tester.pump(const Duration(milliseconds: 300));
           await tester.tap(find.byKey(ValueKey('flask-${p.to}')));
           await tester.pump();
         }
-        await tester.pump(s.settle);
+        await tester.pump(s.captureAfter);
         await _capture(
           tester,
           '$_root/$l/images/phoneScreenshots/${s.name}.png',
+          pixelRatio: _shotDpr,
         );
         // Let pending animations and timers finish before teardown.
         await tester.pump(const Duration(seconds: 5));
