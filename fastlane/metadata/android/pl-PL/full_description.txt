@@ -1,0 +1,15 @@
+Przelewaj warstwy kolorów między flaszkami, aż w każdej zostanie jeden kolor.
+
+Haczyk: kolejka celów u góry mówi, który kolor zamknąć jako następny. Napełnij flaszkę kolorem z początku kolejki, a zostanie zakorkowana i zniknie z planszy. Kolor ukończony za wcześnie czeka zakorkowany na swoją kolej. Planuj przelewanie pod kolejkę.
+
+• Nieskończone, numerowane poziomy generowane na Twoim urządzeniu. Każdy poziom jest sprawdzany: da się go rozwiązać w kolejności z kolejki.
+• Nie da się przegrać. Gdy utkniesz, Flaszki to pokażą, a Ty możesz cofnąć ruch albo zacząć od nowa.
+• Cofanie bez limitu, aż do początku poziomu.
+• Spokojne, namacalne animacje i dźwięki: przechylane flaszki, strumienie, plusk, bąbelki.
+• Wzory dla daltonistów: opcjonalny wzór na każdym kolorze.
+• Działa w pełni offline.
+• Po polsku i po angielsku.
+
+Bez reklam, bez zakupów w aplikacji, bez kont, bez śledzenia. Flaszki nie zbierają żadnych danych. Postęp jest zapisywany tylko na Twoim urządzeniu.
+
+Flaszki to otwarte oprogramowanie (MIT): https://github.com/mx102/flaszki
